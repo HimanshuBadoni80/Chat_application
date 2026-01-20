@@ -5,8 +5,21 @@ export interface ApiResponse<T = void> {
   error?: ApiError;
 }
 
+export const ErrorCodes = {
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+  USER_EXISTS: "USER_EXISTS",
+  AUTH_FAILED: "AUTH_FAILED",
+  SERVER_ERROR: "SERVER_ERROR",
+} as const; //Const Assertion,now obj is just read only.
+// This creates a type that can ONLY be one of the values in ErrorCodes
+export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
+
+// Now, in your ApiError interface:
 export interface ApiError {
-  code: string; // e.g., "USER_EXISTS"
-  message: string; // e.g., "This email is already registered"
-  //   details?: any;     // Extra debugging info
+  code: ErrorCode; // TypeScript will now suggest "USER_EXISTS", "AUTH_FAILED", etc.
+  details?: Record<string, string>; // Extra debugging info
+}
+
+export interface UserInfo {
+  userEmail: string;
 }
