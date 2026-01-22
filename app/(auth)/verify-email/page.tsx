@@ -14,7 +14,6 @@ function VerifyContent() {
             <h2>{email}</h2>
             <p>still cannot find the email</p>
             <button>Resend Verification Email</button>
-            
         </div>
     )
 }
@@ -29,7 +28,7 @@ export default function VerifyPage() {
 
 
 /* 
-case1: user clicks on resend, disable the button for 1 minutes,user goes to mail inbox.
+case1: user clicks on resend, disable the button for 1 minutes,user goes to mail inbox. 
 case2: user clicks on resend, and then leaves the websites.
 case3: user clicks on resend, then go back to signup page.(user should see the email and password details or not the password just the email).then returns to the verrification page. just messing around. the ui must stay still(no page refresh)
 case4: user wants to change the email(entered wrong email), goes back to singup page via link or going back.(should see the previously entered details)

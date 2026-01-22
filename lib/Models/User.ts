@@ -91,6 +91,7 @@ UserSchema.pre("save", async function () {
 
 UserSchema.index({ uid: 1 }, { unique: true });
 UserSchema.index({ email: 1 }, { unique: true });
+// UserSchema.index({verifyTokenExpiry: 1}, {expireAfterSeconds: 36000})
 
 const User = models.User || model<IUser>("User", UserSchema);
 

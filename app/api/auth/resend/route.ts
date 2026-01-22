@@ -48,7 +48,6 @@ export async function POST(request: Request) {
     }
 
     if (user.isVerified) {
-      // set the new hashed token in DB first
       return Response.json(
         {
           success: false,

@@ -10,6 +10,7 @@ export const ErrorCodes = {
   USER_EXISTS: "USER_EXISTS",
   AUTH_FAILED: "AUTH_FAILED",
   SERVER_ERROR: "SERVER_ERROR",
+  LINK_INVALID: "LINK_INVALID",
 } as const; //Const Assertion,now obj is just read only.
 // This creates a type that can ONLY be one of the values in ErrorCodes
 export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
