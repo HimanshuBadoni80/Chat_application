@@ -1,42 +1,90 @@
 "use client";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { useSignUpStore } from "@/lib/store";
+import apiFetch from "@/lib/fetchapi/fetchWrapper";
+import { ApiResponse } from "@/lib/types/api";
+import CheckInboxView from "./components/checkInboxView";
+import VerifyLoader from "./components/VerifyingLoader";
+import Success from "./components/SuccessMessage";
+import ErrorMessage from "./components/ErrorMessage";
 
-import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+export type PageStatus = "idle" | "checking" | "error" | "success";
 
-function VerifyContent() {
-    const searchParams = useSearchParams();
-    const email = searchParams.get('email');
+function VerifyUser() {
+  const searchParams = useSearchParams();
+  const urlEmail = searchParams.get("email");
+  const storeEmail = useSignUpStore((state) => state.email);
+  const resend = useSignUpStore((state) => state.resend);
+  const token = searchParams.get("token");
+  const router = useRouter();
+  const [status, setStatus] = useState<PageStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-    return(
-        <div className='flex flex-col'>
-            <h1>Please verify your email</h1>
-            <p>You are almost there! We have sent an email to</p>
-            <h2>{email}</h2>
-            <p>still cannot find the email</p>
-            <button>Resend Verification Email</button>
-        </div>
-    )
+  useEffect(() => {
+    // absolute guard
+    if (!urlEmail) {
+      router.replace("/signup");
+      return;
+    }
+    // for idle status
+    if (!token && urlEmail !== storeEmail) {
+      router.replace("/signup");
+      return;
+    }
+    let isActive = true;
+    if (token) {
+      // call to api
+      const handleApiCall = async (urlEmail: string, urlToken: string) => {
+        setStatus("checking");
+        try {
+          await apiFetch<ApiResponse>(
+            `/api/auth/verify?email=${encodeURIComponent(urlEmail)}&token=${urlToken}`,
+          );
+          if (!isActive) return;
+          setStatus("success");
+        } catch (error) {
+          if (!isActive) return;
+          setStatus("error");
+
+          if (error && typeof error === "object" && "message" in error) {
+            const apiError = error as ApiResponse;
+            setErrorMessage(apiError.message || "Invalid Link");
+            return;
+          }
+          if (error instanceof Error) {
+            setErrorMessage(error.message);
+            return;
+          }
+
+          setErrorMessage("an unexpected error occured");
+        }
+      };
+      handleApiCall(urlEmail, token);
+    }
+    return () => {
+      isActive = false;
+    };
+  }, [token, urlEmail, router, storeEmail]);
+  if (status === "checking") return <VerifyLoader />;
+  if (status === "success") return <Success />;
+  if (status === "error") return <ErrorMessage errorMessage={errorMessage} resend={resend} setStatus={setStatus} setErrorMessage={setErrorMessage} />;
+  // Default: The "Check your inbox" screen
+  return (
+    <CheckInboxView
+      email={urlEmail}
+      resend={resend}
+      setErrorMessage={setErrorMessage}
+      setStatus={setStatus}
+    />
+  );
 }
 
 export default function VerifyPage() {
-    return(
-        <Suspense fallback= {<div>Loading...</div>}>
-            <VerifyContent/>
-        </Suspense>
-    )
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyUser />
+    </Suspense>
+  );
 }
-
-
-/* 
-case1: user clicks on resend, disable the button for 1 minutes,user goes to mail inbox. 
-case2: user clicks on resend, and then leaves the websites.
-case3: user clicks on resend, then go back to signup page.(user should see the email and password details or not the password just the email).then returns to the verrification page. just messing around. the ui must stay still(no page refresh)
-case4: user wants to change the email(entered wrong email), goes back to singup page via link or going back.(should see the previously entered details)
-*/
-
-/* 
-what user should see on clicking the verification link
-case1: within the 24hrs window, UI-> u have been verified.
-case2: after 24hrs(expired token), UI-> verification token expired, resend the email (with link to signup page or the landing page).
-case3: user already verified or not, clicks the verification link from old  email (invalid token)anyway 
-*/

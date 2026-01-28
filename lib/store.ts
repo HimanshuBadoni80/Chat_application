@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { z } from "zod";
-import { signUpSchema } from "@/lib/zod/zodSchemas";
+import { signUpSchema, emailSchema } from "@/lib/zod/zodSchemas";
 import { ApiResponse, UserInfo } from "./types/api";
+import apiFetch from "./fetchapi/fetchWrapper";
 
 type FormStatus = "idle" | "submitting" | "error" | "success";
 
@@ -15,20 +16,21 @@ interface SignupState {
   email: string;
   error: FormError | null;
   status: FormStatus;
-  resetForm: ()=> void;
+  resetForm: () => void;
   setEmail: (email: string) => void;
   resetEmail: () => void;
   signUp: (password: string) => Promise<void>;
+  resend: (email:string | null) => Promise<ApiResponse>;
 }
 
 export const useSignUpStore = create<SignupState>((set, get) => ({
   email: "",
   error: null,
   status: "idle",
-  resetForm:() => set({error:null,status:"idle"}),
+  resetForm: () => set({ error: null, status: "idle" }),
   setEmail: (newEmail) => set({ email: newEmail }),
   resetEmail: () => set({ email: "" }),
-  signUp: async function (password: string) {
+  signUp: async function (password) {
     // reset error,status
     set({ error: null, status: "submitting" });
 
@@ -113,6 +115,26 @@ export const useSignUpStore = create<SignupState>((set, get) => ({
       const message =
         error instanceof TypeError ? error.message : "unknown error";
       set({ status: "error", error: { general: message } });
+    }
+  },
+  resend: async function (email) {
+    const validation = emailSchema.safeParse(get().email || email);
+    if (!validation.success) {
+      throw new Error("validation error,invalid email format");
+    }
+    try {
+      const responseData = await apiFetch<ApiResponse>("api/auth/resend", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userEmail: validation.data,
+        }),
+      });
+      return responseData;
+    } catch (error) {
+      throw error;
     }
   },
 }));

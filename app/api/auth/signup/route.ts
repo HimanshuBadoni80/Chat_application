@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       email: validation.data.userEmail,
       password: validation.data.userPassword,
       verifyToken: hashedToken,
-      verifyTokenExpiry: new Date(Date.now() + 3600000),
+      verifyTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     //  Only send the email if the save was successful!

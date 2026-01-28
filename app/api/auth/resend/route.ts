@@ -1,16 +1,10 @@
 import { ApiResponse } from "@/lib/types/api";
-import { z } from "zod";
 import connectDB from "@/lib/actions/mongodb";
 import User from "@/lib/Models/User";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/mail/mail";
 import { handleApiError } from "@/lib/error/errorUtil";
-// A simple standalone schema for just the email
-const emailSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .pipe(z.email({ error: "Invalid email format" }));
+import { emailSchema } from "@/lib/zod/zodSchemas";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -48,15 +42,16 @@ export async function POST(request: Request) {
     }
 
     if (user.isVerified) {
-      return Response.json(
-        {
-          success: false,
-          message: "Account already verified",
+      const response: ApiResponse = {
+        success: false,
+        message: "Account already verified ",
+        error: {
+          code: "ALREADY_VERIFIED",
         },
-        {
-          status: 400,
-        }
-      );
+      };
+      return Response.json(response, {
+        status: 400,
+      });
     }
 
     // unverified users
@@ -64,7 +59,7 @@ export async function POST(request: Request) {
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     user.verifyToken = hashedToken;
-    user.verifyTokenExpiry = new Date(Date.now() + 3600000);
+    user.verifyTokenExpiry = new Date(Date.now()+ 24 * 60 * 60 * 1000);
     await user.save();
 
     // send the email
@@ -80,7 +75,7 @@ export async function POST(request: Request) {
       },
       {
         status: 200,
-      }
+      },
     );
   } catch (error) {
     return handleApiError(error);

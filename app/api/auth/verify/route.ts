@@ -51,6 +51,23 @@ export async function GET(request: Request) {
     const { email, token } = validation.data;
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     await connectDB();
+    // if user already verified
+
+    const userexists = await User.findOne({ email }).select("isVerified");
+
+    if (userexists && userexists.isVerified) {
+      // user is verified
+      return Response.json(
+        {
+          success: true,
+          message: "Email is verified now",
+        },
+        {
+          status: 200,
+        },
+      );
+    }
+
     const user = await User.findOneAndUpdate(
       {
         email,
@@ -67,9 +84,9 @@ export async function GET(request: Request) {
       const response: ApiResponse = {
         success: false,
         message: "The verification link is invalid or has expired.",
-        error:{
+        error: {
           code: "LINK_INVALID",
-        }
+        },
       };
       return Response.json(response, {
         status: 400,
@@ -90,7 +107,7 @@ export async function GET(request: Request) {
     return Response.json(
       {
         success: false,
-        message: "Server Error",
+        message: "Server Error,try again later",
       },
       {
         status: 500,
