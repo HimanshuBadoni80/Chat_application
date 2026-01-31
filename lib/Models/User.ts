@@ -16,7 +16,7 @@ export interface IUser extends Document {
 }
 const nanoid = customAlphabet(
   "abcdefghijkmnopqrstuvwxyzABCDEFGHIJKLMNPQRSTUVWXYZ23456789",
-  6
+  6,
 );
 const UserSchema = new Schema<IUser>(
   {
@@ -63,7 +63,7 @@ const UserSchema = new Schema<IUser>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 UserSchema.pre("save", async function () {
