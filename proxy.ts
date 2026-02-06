@@ -31,7 +31,17 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return NextResponse.next();
+  // Create a new Headers object from the existing ones
+  const requestHeaders = new Headers(request.headers);
+  // Passing the current URL so layouts don't have to guess
+  requestHeaders.set("x-url", request.nextUrl.pathname);
+
+  // Pass these new headers into the 'next' response
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {

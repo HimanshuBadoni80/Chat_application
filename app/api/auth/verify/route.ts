@@ -12,13 +12,15 @@ import crypto from "crypto";
 import connectDB from "@/lib/actions/mongodb";
 import User from "@/lib/Models/User";
 import { ApiResponse } from "@/lib/types/api";
+import CreateSessionAndResponse from "@/lib/createsession";
+import { NextRequest } from "next/server";
 
 const verifySchema = z.object({
   token: z.string().min(1, "Too short"),
   email: z.email({ error: "Invalid Email format" }),
 });
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const queryData = {
     token: searchParams.get("token"),
@@ -93,14 +95,14 @@ export async function GET(request: Request) {
       });
     }
 
-    return Response.json(
-      {
-        success: true,
-        message: "Email is verified now",
-      },
-      {
-        status: 200,
-      },
+    // if verified, create a session and redirect to dashboard.
+    const response = await CreateSessionAndResponse(
+      user._id,
+      "/dashboard",
+      request,
+      "json",
+      "Email verified successfully",
+    
     );
   } catch (error) {
     console.error("Error:", error);

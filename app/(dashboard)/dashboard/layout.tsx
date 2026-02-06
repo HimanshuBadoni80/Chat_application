@@ -10,7 +10,7 @@ export default async function DashBoardLayout({
 
   if (!session) {
     const headerList = await headers();
-    const currentRoute = headerList.get("x-invoke-path") || "/dashboard";
+    const currentRoute = headerList.get("x-url") || "/dashboard"; // header from proxy.ts
     redirect(`/login?from=${encodeURIComponent(currentRoute)}&reason=expired`);
   }
   return <>{children}</>;
