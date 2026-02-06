@@ -104,6 +104,7 @@ export async function GET(request: NextRequest) {
       "Email verified successfully",
     
     );
+    return response;
   } catch (error) {
     console.error("Error:", error);
     return Response.json(
