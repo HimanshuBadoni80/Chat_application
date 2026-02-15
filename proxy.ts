@@ -26,7 +26,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If trying to access login while ALREADY logged in
+  // If trying to access login/signup while ALREADY logged in
   if (isAuthPage && sessionToken) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }

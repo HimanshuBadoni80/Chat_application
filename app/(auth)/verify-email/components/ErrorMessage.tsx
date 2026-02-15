@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams,useRouter } from "next/navigation";
 interface ErrorMessageProps {
   errorMessage: string;
-  resend: (email: string | null) => Promise<ApiResponse>;
+  resend: (email:string | null) => Promise<ApiResponse<{userEmail:string}>>;
   setStatus: (status: PageStatus) => void;
   setErrorMessage: (errMessage: string) => void;
 }
@@ -21,6 +21,7 @@ export default function ErrorMessage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlEmail = searchParams.get("email");
+  const [userNotFound, setIsUserNotFound] = useState(false);
   const handleResend = async () => {
     setErrorMessage("");
     // set the countdown value
@@ -38,6 +39,10 @@ export default function ErrorMessage({
         const apiError = error as ApiResponse;
         if (apiError?.error?.code === "ALREADY_VERIFIED") {
           router.push("/login");
+        } else if(apiError?.error?.code === "USER_NOT_FOUND"){
+          setErrorMessage(apiError.message);
+          setIsUserNotFound(true);
+          setStatus("error");
         } else {
           setErrorMessage(apiError.message);
           setStatus("error");
@@ -50,7 +55,7 @@ export default function ErrorMessage({
         setStatus("error");
         return;
       }
-      setErrorMessage("an unexpected error occured");
+      setErrorMessage("an unexpected error occurred");
       setStatus("error");
     } finally {
       setIsPending(false);
@@ -69,6 +74,9 @@ export default function ErrorMessage({
   return (
     <div>
       <div>{errorMessage}</div>
+      {userNotFound && (
+        <Link href="/signup">signup</Link>
+      )}
       <button onClick={handleResend} disabled={isPending || countdown > 0}>
         {isPending
           ? "sending"

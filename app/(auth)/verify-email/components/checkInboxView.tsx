@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { PageStatus } from "../page";
 interface CheckInboxProps {
   email: string | null;
-  resend: (email:string | null) => Promise<ApiResponse>;
+  resend: (email:string | null) => Promise<ApiResponse<{userEmail:string}>>;
   setErrorMessage: (errMessage: string) => void;
   setStatus: (status: PageStatus) => void;
 }
@@ -51,7 +51,7 @@ export default function CheckInboxView({
         setStatus("error");
         return;
       }
-      setErrorMessage("an unexpected error occured");
+      setErrorMessage("an unexpected error occurred");
       setStatus("error");
     } finally {
       setIsPending(false);

@@ -15,12 +15,14 @@ export type PageStatus = "idle" | "checking" | "error" | "success";
 function VerifyUser() {
   const searchParams = useSearchParams();
   const urlEmail = searchParams.get("email");
+  const token = searchParams.get("token");
+  const from = searchParams.get("from") || "/dashboard";
   const storeEmail = useSignUpStore((state) => state.email);
   const resend = useSignUpStore((state) => state.resend);
-  const token = searchParams.get("token");
   const router = useRouter();
   const [status, setStatus] = useState<PageStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [redirectTo, setRedirectTo] = useState("/dashboard");
 
   useEffect(() => {
     // absolute guard
@@ -39,10 +41,14 @@ function VerifyUser() {
       const handleApiCall = async (urlEmail: string, urlToken: string) => {
         setStatus("checking");
         try {
-          await apiFetch<ApiResponse>(
-            `/api/auth/verify?email=${encodeURIComponent(urlEmail)}&token=${urlToken}`,
+          const result = await apiFetch<ApiResponse<{ redirectTo: string }>>(
+            `/api/auth/verify?email=${encodeURIComponent(urlEmail)}&token=${urlToken}&from=${encodeURIComponent(from)}`,
           );
+
           if (!isActive) return;
+          if (result.success && result?.data?.redirectTo) {
+            setRedirectTo(result.data.redirectTo);
+          }
           setStatus("success");
         } catch (error) {
           if (!isActive) return;
@@ -58,7 +64,7 @@ function VerifyUser() {
             return;
           }
 
-          setErrorMessage("an unexpected error occured");
+          setErrorMessage("an unexpected error occurred");
         }
       };
       handleApiCall(urlEmail, token);
@@ -66,10 +72,18 @@ function VerifyUser() {
     return () => {
       isActive = false;
     };
-  }, [token, urlEmail, router, storeEmail]);
+  }, [token, urlEmail, router, storeEmail, from]);
   if (status === "checking") return <VerifyLoader />;
-  if (status === "success") return <Success />;
-  if (status === "error") return <ErrorMessage errorMessage={errorMessage} resend={resend} setStatus={setStatus} setErrorMessage={setErrorMessage} />;
+  if (status === "success") return <Success redirectTo={redirectTo} />;
+  if (status === "error")
+    return (
+      <ErrorMessage
+        errorMessage={errorMessage}
+        resend={resend}
+        setStatus={setStatus}
+        setErrorMessage={setErrorMessage}
+      />
+    );
   // Default: The "Check your inbox" screen
   return (
     <CheckInboxView

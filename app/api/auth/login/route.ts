@@ -50,7 +50,7 @@ export default async function POST(request: NextRequest) {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       const response: ApiResponse = {
         success: false,
-        message: "invalid credentails",
+        message: "invalid credentials",
         error: {
           code: "INVALID_CREDENTIALS",
         },

@@ -20,7 +20,7 @@ interface SignupState {
   setEmail: (email: string) => void;
   resetEmail: () => void;
   signUp: (password: string) => Promise<void>;
-  resend: (email:string | null) => Promise<ApiResponse>;
+  resend: (email:string | null) => Promise<ApiResponse<{userEmail:string}>>;
 }
 
 export const useSignUpStore = create<SignupState>((set, get) => ({
@@ -123,7 +123,7 @@ export const useSignUpStore = create<SignupState>((set, get) => ({
       throw new Error("validation error,invalid email format");
     }
     try {
-      const responseData = await apiFetch<ApiResponse>("api/auth/resend", {
+      const responseData = await apiFetch<ApiResponse<{userEmail:string}>>("api/auth/resend", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

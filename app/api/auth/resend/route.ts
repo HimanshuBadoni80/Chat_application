@@ -35,6 +35,9 @@ export async function POST(request: Request) {
       const response: ApiResponse = {
         success: false,
         message: "user not found",
+        error:{
+          code:"USER_NOT_FOUND"
+        }
       };
       return Response.json(response, {
         status: 404,

@@ -4,7 +4,7 @@ interface MongoError extends Error {
   code?: number;
 }
 
-// function that tell ts, the error is of monogoDB type error
+// function that tell ts, the error is of mongoDB type error
 function isMongoError(error: unknown): error is MongoError {
   return (
     typeof error === "object" &&
