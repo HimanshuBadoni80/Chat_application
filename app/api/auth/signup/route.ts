@@ -101,7 +101,7 @@ export async function POST(request: Request) {
 
     //  Only send the email if the save was successful!
     if (newUser) {
-      await sendEmail(validation.data.userEmail, token);
+      await sendEmail(validation.data.userEmail, token,"/verify-email",null);
       const response: ApiResponse<UserInfo> = {
         success: true,
         message: "Verification email sent!",

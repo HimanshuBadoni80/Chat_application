@@ -1,9 +1,8 @@
 "use server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import connectDB from "@/lib/actions/mongodb";
-import Session from "@/lib/Models/Session";
-import crypto from "crypto";
+import deleteSession from "@/lib/auth/logoutService";
+
 
 export default async function logout() {
   const cookieStore = await cookies();
@@ -14,14 +13,7 @@ export default async function logout() {
   }
 
   try {
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(rawToken)
-      .digest("hex");
-
-    await connectDB();
-
-    await Session.deleteOne({ sessionToken: hashedToken });
+    await deleteSession(rawToken);
     cookieStore.delete("session_token");
     redirect("/login");
   } catch (error) {

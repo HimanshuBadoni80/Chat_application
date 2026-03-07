@@ -5,10 +5,17 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendEmail(
   email: string = "himanshubadoni80@gmail.com",
-  verifyToken: string
+  verifyToken: string,
+  redirectTo: string,
+  from: string | null,
 ) {
   const domain = process.env.NEXT_PUBLIC_APP_URL;
-  const verificationUrl = `${domain}/verify-email?token=${verifyToken}&email=${email}`;
+  let verificationUrl = `${domain}${redirectTo}?token=${verifyToken}&email=${encodeURIComponent(email)}`;
+
+  // Only append 'from' if it actually exists
+  if (from) {
+    verificationUrl += `&from=${encodeURIComponent(from)}`;
+  }
   try {
     await resend.emails.send({
       from: "onboarding@resend.dev",

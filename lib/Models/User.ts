@@ -11,13 +11,15 @@ export interface IUser extends Document {
   isVerified: boolean;
   verifyToken?: string;
   verifyTokenExpiry?: Date;
+  passwordResetHash?: string;
+  passwordResetExpires?: Date;
+  resetAttempts: number;
   createdAt: Date;
   updatedAt: Date;
 }
-const nanoid = customAlphabet(
-  "abcdefghijkmnopqrstuvwxyzABCDEFGHIJKLMNPQRSTUVWXYZ23456789",
-  6,
-);
+
+const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHIJKLMNPQRSTUVWXYZ23456789";
+const nanoid = customAlphabet(alphabet, 6);
 const UserSchema = new Schema<IUser>(
   {
     uid: {
@@ -60,6 +62,15 @@ const UserSchema = new Schema<IUser>(
     verifyTokenExpiry: {
       type: Date,
     },
+    passwordResetHash: {
+      type: String,
+    },
+    passwordResetExpires: {
+      type: Date,
+    },
+    resetAttempts: {
+      type: Number,
+    },
   },
   {
     timestamps: true,
@@ -96,3 +107,4 @@ UserSchema.index({ email: 1 }, { unique: true });
 const User = models.User || model<IUser>("User", UserSchema);
 
 export default User;
+export const nanoidRegex = new RegExp(`^[${alphabet}]{6}$`);

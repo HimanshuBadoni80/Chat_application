@@ -1,4 +1,5 @@
 // error handler for resend and signup page
+import crypto from "crypto";
 
 interface MongoError extends Error {
   code?: number;
@@ -15,7 +16,8 @@ function isMongoError(error: unknown): error is MongoError {
 }
 
 export function handleApiError(error: unknown) {
-  console.error("API Error Logged:", error);
+  const traceId = crypto.randomBytes(4).toString("hex");
+  console.error(`Error [${traceId}]:`, error);
   if (isMongoError(error)) {
     if (error?.code === 11000) {
       return Response.json(
@@ -25,7 +27,7 @@ export function handleApiError(error: unknown) {
         },
         {
           status: 409,
-        }
+        },
       );
     }
 
@@ -37,7 +39,7 @@ export function handleApiError(error: unknown) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
   }
@@ -46,12 +48,14 @@ export function handleApiError(error: unknown) {
   return Response.json(
     {
       success: false,
-      message: "an unexpected error occured",
+      message: `Something went wrong on our end. Please try again shortly. Error ID: ${traceId}`,
     },
     {
       status: 500,
-    }
+    },
   );
+
+  // if a user emails support saying "I got error a1b2c3," you can search your logs for that specific ID and find exactly what crashed without ever exposing your DB details to them.
 }
 
 // Check if it's the MongoDB "Duplicate Key" error

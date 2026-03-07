@@ -25,7 +25,7 @@ export default async function GetSession() {
     const session = await Session.findOne({
       sessionToken: hashedToken,
       expiresAt: { $gt: new Date() },
-    }).populate("userId", "uid username email isVerified").lean();
+    }).populate("userId", " _id uid username email isVerified").lean();
 
     // if no user found with the token
     if (!session || !session.userId) {

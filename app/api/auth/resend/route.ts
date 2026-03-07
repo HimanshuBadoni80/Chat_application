@@ -35,9 +35,9 @@ export async function POST(request: Request) {
       const response: ApiResponse = {
         success: false,
         message: "user not found",
-        error:{
-          code:"USER_NOT_FOUND"
-        }
+        error: {
+          code: "USER_NOT_FOUND",
+        },
       };
       return Response.json(response, {
         status: 404,
@@ -62,12 +62,12 @@ export async function POST(request: Request) {
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     user.verifyToken = hashedToken;
-    user.verifyTokenExpiry = new Date(Date.now()+ 24 * 60 * 60 * 1000);
+    user.verifyTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await user.save();
 
     // send the email
 
-    await sendEmail(email, token);
+    await sendEmail(email, token, "/verify-email", null);
     return Response.json(
       {
         success: true,

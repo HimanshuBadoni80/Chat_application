@@ -1,6 +1,6 @@
 /* what i need, first
 1.token and email and zod to verify them.
-2. i need cryto for hasing the token
+2. i need crypto for hashing the token
 3. i need mongoose connection
 */
 
