@@ -15,7 +15,7 @@ export default async function CreateSessionAndResponse(
     .createHash("sha256")
     .update(rawToken)
     .digest("hex");
-  const ip = getCientIp(request);
+  const ip = getClientIp(request);
   const newSession = await Session.create({
     sessionToken: hashedToken,
     userId: userId,
@@ -70,7 +70,7 @@ function hasIp(request: NextRequest): request is NextRequest & { ip: string } {
   return "ip" in request;
 }
 
-function getCientIp(request: NextRequest): string {
+function getClientIp(request: NextRequest): string {
   //Check for the standard proxy header (most reliable in prod)
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) return forwardedFor.split(",")[0].trim();

@@ -1,6 +1,7 @@
 import { Schema, Document, model, models } from "mongoose";
 
 export interface IMessage extends Document {
+  tempId?: string;
   conversationId: Schema.Types.ObjectId;
   senderId: Schema.Types.ObjectId;
   content: string;
@@ -9,18 +10,27 @@ export interface IMessage extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// used in useChatStore , [conversationId]/route.ts, api/messages/send/route.ts
 export interface IMessageBase {
-  _id: string; // Lean objects have string/ObjectId IDs
-  conversationId: Schema.Types.ObjectId;
-  senderId: Schema.Types.ObjectId;
+  _id?: string; // Lean objects have string/ObjectId IDs
+  conversationId: string;
+  senderId: string;
   content: string;
   messageType: "text" | "image" | "file";
-  status: "sent" | "delivered" | "read";
-  createdAt: Date;
-  updatedAt: Date;
+  status?: "sent" | "delivered" | "read" | "pending";
+  createdAt: string;
+  tempId?: string;
 }
 
+export interface IMessagePatch {
+  _id: string;
+  tempId: string;
+  createdAt: string;
+  status: "sent";
+}
 
+export type IncomingMessage = IMessageBase | IMessagePatch;
 
 const MessageSchema = new Schema<IMessage>(
   {

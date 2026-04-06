@@ -1,8 +1,8 @@
-import { Schema, Document, model, models } from "mongoose";
+import { Schema, Types, Document, model, models } from "mongoose";
 
 export interface IConversation extends Document {
-  participants: Schema.Types.ObjectId[];
-  lastMessage?: Schema.Types.ObjectId;
+  participants: Types.ObjectId[];
+  lastMessage?: Types.ObjectId;
   isGroup: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -12,13 +12,13 @@ const ConversationSchema = new Schema<IConversation>(
   {
     participants: [
       {
-        type: Schema.Types.ObjectId,
+        type: Types.ObjectId,
         ref: "User",
         required: true,
       },
     ],
     lastMessage: {
-      type: Schema.Types.ObjectId,
+      type: Types.ObjectId,
       ref: "Message",
     },
     isGroup: {

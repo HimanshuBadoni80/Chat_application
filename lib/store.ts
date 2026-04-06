@@ -98,7 +98,7 @@ export const useSignUpStore = create<SignupState>((set, get) => ({
 
         // fallback if details is not present
         if (!newErrors.email && !newErrors.password) {
-          newErrors.general = message || "An unexpected error occured";
+          newErrors.general = message || "An unexpected error occurred";
         }
 
         set({ status: "error", error: newErrors });

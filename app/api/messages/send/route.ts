@@ -5,13 +5,16 @@ import { ApiResponse } from "@/lib/types/api";
 import GetSession from "@/lib/auth";
 import { Message, Conversation } from "@/lib/Models/index";
 import { Types } from "mongoose";
-import type { IMessage } from "@/lib/Models/index";
+import type { IMessageBase } from "@/lib/Models/index";
 import * as z from "zod";
 import { handleApiError } from "@/lib/error/errorUtil";
 export default async function POST(request: NextRequest) {
   try {
     // get the values
     const body = await request.json();
+    /* body will have
+      {conversationId,content,messageType,receiverId,temp}
+    */
     const validation = messageSchema.safeParse(body);
     if (!validation.success) {
       const flattened = z.flattenError(validation.error);
@@ -31,7 +34,7 @@ export default async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    const { conversationId, content, messageType } = validation.data;
+    const { conversationId, content, messageType, tempId } = validation.data;
     // authenticate the sender
     const session = await GetSession();
     // no active session
@@ -84,6 +87,7 @@ export default async function POST(request: NextRequest) {
 
     // parallel update
     const newMessage = await Message.create({
+      tempId,
       conversationId,
       senderId,
       content,
@@ -91,16 +95,16 @@ export default async function POST(request: NextRequest) {
       status: "sent",
     });
 
-    // clean object for both the Websocket and HTTP response
-    const messagePayload: Partial<IMessage> = {
-      _id: newMessage._id.tostring(),
+    // clean object DTO for both the Websocket and HTTP response
+    // this one is for the receiver with no status field
+    const messagePayload: IMessageBase = {
+      _id: newMessage._id.toString(),
       conversationId: newMessage.conversationId.toString(),
       senderId: newMessage.senderId.toString(),
       content: newMessage.content,
       messageType: newMessage.messageType,
-      createdAt: newMessage.createdAt,
+      createdAt: newMessage.createdAt.toISOString(),
     };
-
     await Conversation.findByIdAndUpdate(conversationId, {
       lastMessage: newMessage,
       updatedAt: new Date(),
@@ -119,10 +123,15 @@ export default async function POST(request: NextRequest) {
       }),
     }).catch((err) => console.error("Ws push failed", err));
 
-    const response: ApiResponse<Partial<IMessage>> = {
-      success: true,
-      message: "message saved",
-      data: { ...messagePayload, status: "sent" }, // send the clean object
+      const response: ApiResponse<Partial<IMessageBase>> = {
+        success: true,
+        message: "message saved",
+        data: {
+          _id: newMessage._id.tostring(),
+          tempId,
+          status: "sent",
+          createdAt: newMessage.createdAt,
+        }, // send the clean object
     };
     return NextResponse.json(response, {
       status: 200,

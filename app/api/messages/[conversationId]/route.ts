@@ -72,10 +72,22 @@ export default async function GET(
       .lean();
 
     const oldestToNewMessages = [...messages].reverse(); // for ui, latest at the bottom,oldest at the top of screen
+
+    // clean DTO Data Transfer Object
+    const cleanMessages:IMessageBase[] = oldestToNewMessages.map((msg) => ({
+      _id: msg._id.toString(),
+      tempId: msg.tempId.toString(),
+      conversationId: msg.conversationId.toString(),
+      senderId: msg.senderId.toString(),
+      content: msg.content,
+      messageType: msg.messageType,
+      status: msg.status || "sent",
+      createdAt: msg.createdAt,
+    }));
     const response: ApiResponse<IMessageBase[]> = {
       success: true,
       message: "messages fetched successfully",
-      data: oldestToNewMessages,
+      data: cleanMessages,
     };
 
     return NextResponse.json(response, {
