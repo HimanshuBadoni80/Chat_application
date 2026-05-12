@@ -1,32 +1,75 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@theme {
+  /* 1. THE PRIMITIVES (Your Tokens) */
+  --color-primary-50: #e6f2f1;
+  --color-primary-500: #098175;
+  --color-primary-950: #043631;
+  --color-secondary-500: #ff6161;
+  --color-neutral-950: #0b1414;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* 2. TYPOGRAPHY (Your 1.25 Scale) */
+  --text-xs: 0.625rem;
+  --text-sm: 0.813rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.563rem;
+  --text-2xl: 1.938rem;
+  --text-3xl: 2.438rem;
+  --text-4xl: 3.063rem;
+  --text-5xl: 3.813rem;
 
-@theme inline {
+  /* 3. SHADCN / TAILWIND BRIDGING */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+  --radius-xl: var(--radius);
+  --radius-lg: calc(var(--radius) - 2px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 6px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* 4. THE DARK MODE SWITCH */
+@custom-variant dark (&:is(.dark *));
+
+/* 5. THE SEMANTIC ENGINE */
+:root {
+  --background: #fdfcfb;
+  --foreground: var(--color-neutral-950);
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --primary: var(--color-primary-500);
+  --primary-foreground: #ffffff;
+  --muted: var(--color-neutral-500);
+  --ring: var(--color-primary-500);
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: var(--color-neutral-950);
+  --foreground: var(--color-primary-50);
+  --card: #142624;
+  --border: var(--color-primary-950);
+  --primary: var(--color-primary-500);
+  --primary-foreground: var(--color-primary-50);
+  --muted: var(--color-primary-300);
+}
+
+/* 6. THE GLOBAL DEFAULTS */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  height: 100vh;
-  width: 100vw;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  body {
+    @apply bg-background text-foreground antialiased min-h-screen;
+    font-family: var(--font-inter), sans-serif;
+  }
 }

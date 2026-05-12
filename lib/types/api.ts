@@ -32,3 +32,7 @@ export interface ApiError {
 export interface UserInfo {
   userEmail: string;
 }
+
+export function isApiResponse(error: unknown): error is ApiResponse<unknown> {
+    return typeof error === "object" && error !== null && "success" in error ;
+  }

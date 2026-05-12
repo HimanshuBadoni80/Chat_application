@@ -4,9 +4,9 @@ import { ApiResponse } from "@/lib/types/api";
 import connectDB from "@/lib/actions/mongodb";
 import { handleApiError } from "@/lib/error/errorUtil";
 import { Message, Conversation, IMessageBase } from "@/lib/Models";
-import GetSession from "@/lib/auth";
+import GetSession from "@/lib/getSession";
 
-export default async function GET(
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> },
 ) {
@@ -44,7 +44,7 @@ export default async function GET(
       });
     }
 
-    const currentUserId = session.userId._id;
+    const currentUserId = session.user._id;
 
     // check if the currentUser is participant or not
     const conversation = await Conversation.findOne({
@@ -74,7 +74,7 @@ export default async function GET(
     const oldestToNewMessages = [...messages].reverse(); // for ui, latest at the bottom,oldest at the top of screen
 
     // clean DTO Data Transfer Object
-    const cleanMessages:IMessageBase[] = oldestToNewMessages.map((msg) => ({
+    const cleanMessages: IMessageBase[] = oldestToNewMessages.map((msg) => ({
       _id: msg._id.toString(),
       tempId: msg.tempId.toString(),
       conversationId: msg.conversationId.toString(),
@@ -82,7 +82,7 @@ export default async function GET(
       content: msg.content,
       messageType: msg.messageType,
       status: msg.status || "sent",
-      createdAt: msg.createdAt,
+      createdAt: msg.createdAt.toISOString(),
     }));
     const response: ApiResponse<IMessageBase[]> = {
       success: true,

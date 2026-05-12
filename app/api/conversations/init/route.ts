@@ -4,10 +4,10 @@ import { initChatSchema } from "@/lib/zod/conversation/Schemas";
 import { ApiResponse } from "@/lib/types/api";
 import { User, Conversation } from "@/lib/Models";
 import connectDB from "@/lib/actions/mongodb";
-import GetSession from "@/lib/auth";
+import GetSession from "@/lib/getSession";
 import { handleApiError } from "@/lib/error/errorUtil";
 
-export default async function POST(request: NextRequest) {
+export  async function POST(request: NextRequest) {
   /* 🛠️ The Corrected Logic Flow
 The Request: Frontend sends only the receiverId.
 
@@ -85,7 +85,7 @@ The "Hydration": Once on that page, the app fetches the old messages and connect
     const receiverId = receiver._id;
 
     //PREVENT SELF-CHAT (The Senior Check)
-    if (senderId.tostring() === receiverId.tostring()) {
+    if (senderId.toString() === receiverId.toString()) {
       const response: ApiResponse = {
         success: false,
         message: "can't start chat with yourself",

@@ -10,7 +10,7 @@ import { handleApiError } from "@/lib/error/errorUtil";
 
 
 // looks for a Token Hash in the database.
-export default async function POST(request: NextRequest) {
+export  async function POST(request: NextRequest) {
   /* the flow
         get the json body
         zod validation

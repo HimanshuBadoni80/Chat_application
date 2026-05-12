@@ -5,7 +5,7 @@ import { zodLogin } from "@/lib/zod/zodSchemas";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { ApiResponse } from "@/lib/types/api";
+import { ApiResponse,isApiResponse } from "@/lib/types/api";
 import apiFetch from "@/lib/fetchapi/fetchWrapper";
 import { useSignUpStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
@@ -19,11 +19,9 @@ export default function LoginForm() {
 
   // to get the "from" from the url.
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") || "/dashboard";
+  const from = searchParams.get("from") || "/chat";
 
-  function isApiResponse(error: unknown): error is ApiResponse<unknown> {
-    return typeof error === "object" && error !== null && "success" in error;
-  }
+  
   const handleSubmit = async function (e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError({});

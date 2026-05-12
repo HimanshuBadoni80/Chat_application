@@ -107,4 +107,3 @@ UserSchema.index({ email: 1 }, { unique: true });
 const User = models.User || model<IUser>("User", UserSchema);
 
 export default User;
-export const nanoidRegex = new RegExp(`^[${alphabet}]{6}$`);

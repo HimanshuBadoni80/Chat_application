@@ -10,7 +10,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import CreateSessionAndResponse from "@/lib/createsession";
 
-export default async function POST(request: NextRequest) {
+export  async function POST(request: NextRequest) {
   const body = await request.json();
   const validation = zodLogin.safeParse(body);
 
@@ -79,7 +79,7 @@ export default async function POST(request: NextRequest) {
 
     const response = await CreateSessionAndResponse(
       user._id,
-      "/dashboard",
+      "/chat",
       request,
       "json",
       "Logged in successfully",

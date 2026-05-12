@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import type { IMessageBase, IncomingMessage } from "./Models/message";
 import { SocketMessageSchema } from "./zod/messages/Schemas";
-
+import type { updatedIConversation } from "./types/Conversation";
+import apiFetch from "./fetchapi/fetchWrapper";
+import { ApiResponse, isApiResponse } from "./types/api";
 // hepler function checks for duplicate messages
 const mergeAndDedupe = (
   existing: IMessageBase[],
@@ -52,21 +54,50 @@ const mergeAndDedupe = (
   );
 };
 
-interface ChatStore {
+function hasRedirectTo(data: unknown): data is { redirectTo: string } {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "redirectTo" in data &&
+    typeof (data as { redirectTo?: unknown }).redirectTo === "string"
+  );
+}
+
+export interface ChatStore {
+  user: {
+    _id: string;
+    uid: string;
+    username: string;
+    email: string;
+    isVerified: boolean;
+  } | null;
   // the connection state
   socket: WebSocket | null;
   status: "idle" | "connecting" | "connected" | "disconnected" | "error";
   isIdentified: boolean; // Confirms the { type: "IDENTIFY" } worked
+  pongTimeout: ReturnType<typeof setTimeout> | null;
   error: string | null;
 
   // the data
   messages: Record<string, IMessageBase[]>;
+  lastSyncedAt: string | null;
+  isSyncingMessages: boolean;
+  conversations: updatedIConversation[] | [];
   activeConversationId: string | null;
 
   // UI lifecycle
+  isLoadingConversations: boolean;
   isLoadingMessages: boolean;
   reconnectTimeout: ReturnType<typeof setTimeout> | null;
   retryCount: number;
+
+  setAuth: (user: {
+    _id: string;
+    uid: string;
+    username: string;
+    email: string;
+    isVerified: boolean;
+  }) => void;
   // actions
   connect: (userId: string) => void;
   disconnect: () => void;
@@ -79,18 +110,39 @@ interface ChatStore {
   addMessage: (conversationId: string, message: IncomingMessage) => void;
   setMessage: (conversationId: string, message: IncomingMessage[]) => void;
   setActiveConversationId: (Id: string) => void;
+  setConversations: () => Promise<void>;
+  bumpConvs: (
+    conversationId: string,
+    lastestMessage: IMessageBase,
+  ) => updatedIConversation[];
+  // unifiedSyncUtility: ()=> void;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
+  user: null,
   socket: null,
   status: "idle",
   isIdentified: false,
+  pongTimeout: null,
   error: null,
   messages: {},
+  lastSyncedAt: null,
+  isSyncingMessages: false,
+  conversations: [],
   activeConversationId: null,
+  isLoadingConversations: false,
   isLoadingMessages: false,
   reconnectTimeout: null,
   retryCount: 0,
+  setAuth: function (user: {
+    _id: string;
+    uid: string;
+    username: string;
+    email: string;
+    isVerified: boolean;
+  }) {
+    set({ user });
+  },
   connect: function (userId: string) {
     // check for existing socket
     const socket = get().socket;
@@ -167,37 +219,47 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   handleIncomingMessage: function (data: string, ws: WebSocket) {
     try {
       // parse into json
-    const message = JSON.parse(data);
-    // validate the data
-    const validation = SocketMessageSchema.safeParse(message);
-    // if(!validation.success)
+      const message = JSON.parse(data);
+      // validate the data
+      const validation = SocketMessageSchema.safeParse(message);
+      // if(!validation.success)
 
-    // const socket = get().socket;
+      // const socket = get().socket;
 
-    switch (validation.data?.type) {
-      case "NEW_MESSAGE":
-        // push it in messages record
-        // how?
-        const { payload } = validation.data;
-        get().addMessage(payload.conversationId, payload);
-        break;
-      case "PING":
-        // send a pong message
-        ws.send(JSON.stringify({ type: "PONG" }));
-        break;
-      // case "TYPING_INDICATOR":
-      //   // show typing indicator
-      // break;
-      // case "MARK_DELIVERED":
-      //   // show double ticks
-      //   break;
-      default:
-        break;
-    }
+      switch (validation.data?.type) {
+        case "NEW_MESSAGE":
+          // push it in messages record
+          // how?
+          const { payload } = validation.data;
+          get().addMessage(payload.conversationId, payload);
+          break;
+        case "PING":
+          // send a pong message
+          ws.send(JSON.stringify({ type: "PONG" }));
+          break;
+        case "PONG":
+          // server responded
+          const pongTimeout = get().pongTimeout;
+          if (pongTimeout) {
+            clearTimeout(pongTimeout);
+            set({ pongTimeout: null });
+            console.log("Socket is healthy");
+          }
+
+          break;
+
+        // case "TYPING_INDICATOR":
+        //   // show typing indicator
+        // break;
+        // case "MARK_DELIVERED":
+        //   // show double ticks
+        //   break;
+        default:
+          break;
+      }
     } catch (error) {
       console.error("Malformed Socket JSON:", error);
     }
-    
   },
   addMessage: function (conversationId: string, Incoming: IncomingMessage) {
     // work is to push messages in the messages record
@@ -205,41 +267,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set((state) => {
       const existingMessages = state.messages[conversationId] || [];
 
-      // old logic
-      // // search in the current array for a message index with tempId or _id
-      // const existingIndex = currentList.findIndex(
-      //   (m) =>
-      //     (IncomingMessage.tempId && m.tempId === IncomingMessage.tempId) ||
-      //     ("_id" in IncomingMessage && m._id === IncomingMessage._id),
-      // );
-
-      // const updatedList = [...currentList];
-
-      // if (existingIndex !== -1) {
-      //   // case 2: update the message obj
-      //   const existingMessage = updatedList[existingIndex];
-      //   const updatedMessage = {
-      //     ...existingMessage,
-      //     ...IncomingMessage,
-      //   };
-      //   // if ("_id" in IncomingMessage) {
-      //   //   delete updatedMessage.tempId;
-      //   // }
-      //   updatedList[existingIndex] = updatedMessage as IMessageBase;
-      // } else {
-      //   // case 1 and 3
-      //   if (!("content" in IncomingMessage)) return state;
-
-      //   updatedList.push(IncomingMessage as IMessageBase);
-      // }
-
-      // // sort the array
-      // updatedList.sort(
-      //   (a, b) =>
-      //     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      // );
-
       const updated = mergeAndDedupe(existingMessages, [Incoming]);
+      const latest = updated.at(-1);
+      // call bumpConvs
+      if (latest) {
+        const updatedList = get().bumpConvs(conversationId, latest);
+        const currentSync = get().lastSyncedAt;
+        if (!currentSync) {
+          set({ lastSyncedAt: latest.createdAt, conversations: updatedList });
+        } else {
+          const newTime = new Date(latest.createdAt).getTime();
+          const oldTime = new Date(currentSync).getTime();
+          set({
+            lastSyncedAt: newTime > oldTime ? latest.createdAt : currentSync,
+            conversations: updatedList,
+          });
+        }
+      }
 
       return {
         messages: {
@@ -248,25 +292,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         },
       };
     });
-
-    // case 1: for sender, get the conversationId and create a message obj with temp Id
-    //  {conversationId,senderId,content,messageType,status,createdAt,tempId} and what to send to api
-    // {conversationId,content,messageType,receiverId,tempId}
-    //
-    /* case 2: message from the http api response
-      {_id: newMessage._id.tostring(),
-      conversationId: newMessage.conversationId.toString(),
-      senderId: newMessage.senderId.toString(),
-      content: newMessage.content,
-      messageType: newMessage.messageType,
-      createdAt: newMessage.createdAt,
-      status: "sent", 
-      tempId} 
-      
-      update the message in the array thus updating the UI
-    */
-
-    /* case 3: when receiving  a new message, just push it in the array */
   },
   setMessage: function (conversationId: string, message: IncomingMessage[]) {
     // push the previous messages in the record
@@ -276,6 +301,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       // for the first time, the key with conversationId is undefined in the state so a default empty [] acts as a fallback.
 
       const updated = mergeAndDedupe(existingMessages, message);
+      const latest = updated.at(-1);
+      if (latest) {
+        const updatedList = get().bumpConvs(conversationId, latest);
+        const currentSync = get().lastSyncedAt;
+        if (!currentSync) {
+          set({ lastSyncedAt: latest.createdAt, conversations: updatedList });
+        } else {
+          const newTime = new Date(latest.createdAt).getTime();
+          const oldTime = new Date(currentSync).getTime();
+          set({
+            lastSyncedAt: newTime > oldTime ? latest.createdAt : currentSync,
+            conversations: updatedList,
+          });
+        }
+      }
 
       return {
         messages: {
@@ -288,30 +328,142 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
   setActiveConversationId: (ConversationId: string) =>
     set({ activeConversationId: ConversationId }),
+  setConversations: async () => {
+    set({ isLoadingConversations: true });
+    try {
+      const conversationList = await apiFetch<updatedIConversation[]>(
+        "api/conversations/conversationList",
+      );
+      if (conversationList.length > 0) {
+        // push the data
+        set({ conversations: conversationList });
+
+        // update the lastSyncedAt
+        set({
+          lastSyncedAt:
+            conversationList[0].lastMessage?.createdAt ??
+            new Date().toISOString(),
+        });
+
+        // push data in messages
+        set((state) => {
+          const seededMessages: Record<string, IMessageBase[]> = {};
+
+          conversationList.forEach((conv) => {
+            const stringId = conv._id.toString();
+            // don't fill if we already have messages
+            if (conv.lastMessage && !(stringId in state.messages)) {
+              seededMessages[stringId] = [conv.lastMessage];
+            }
+          });
+
+          return {
+            messages: {
+              ...state.messages,
+              ...seededMessages,
+            },
+          };
+        });
+      } else {
+        set({ lastSyncedAt: new Date().toISOString() });
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "an unexpected error occured";
+      set({ error: errorMessage });
+    } finally {
+      set({ isLoadingConversations: false });
+    }
+  },
+  bumpConvs: (conversationId: string, lastestMessage: IMessageBase) => {
+    // find conversation where id is ${conversationId} and put the message as lastMessage
+    // then sort it.
+    const updatedList = get().conversations.map((conv) => {
+      if (conv._id === conversationId)
+        return { ...conv, lastMessage: lastestMessage };
+      return conv;
+    });
+    updatedList.sort((a, b) => {
+      const timeA = a.lastMessage ? a.lastMessage.createdAt : a.createdAt;
+      const timeB = b.lastMessage ? b.lastMessage.createdAt : b.createdAt;
+      return new Date(timeB).getTime() - new Date(timeA).getTime();
+    });
+    return updatedList;
+  },
+  unifiedSyncUtility: async function (userId: string): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    set({ isSyncingMessages: true });
+    // Fire the HTTP Sync: fetch(/api/messages/sync?since=...)
+    const { lastSyncedAt } = get();
+
+    let httpReport = { success: false, message: "" };
+
+    if (!lastSyncedAt) {
+      set({ isSyncingMessages: false });
+      console.log("Skipping sync: No baseline timestamp yet.");
+      httpReport = {
+        success: false,
+        message: "No sync baseline established yet",
+      };
+      return httpReport;
+    }
+
+    try {
+      const response = await apiFetch<ApiResponse<IMessageBase[]>>(
+        `/api/messages/sync?since=${lastSyncedAt}`,
+      );
+
+      const messageArray = response.data;
+
+      // if array in not empty
+      if (Array.isArray(messageArray) && messageArray.length > 0) {
+        // loop the addmessage
+        const addMessage = get().addMessage;
+        messageArray.forEach((msg) => {
+          addMessage(msg.conversationId, msg);
+        });
+      }
+      httpReport = { success: true, message: "Synced successfully" };
+    } catch (error) {
+      // handle all the thrown errors by apiFetch.
+
+      if (isApiResponse(error)) {
+        if (error.error?.code === "NO_ACTIVE_SESSION") {
+          const redirectTo = hasRedirectTo(error.data)
+            ? error.data.redirectTo
+            : "/login";
+
+          window.location.href = redirectTo;
+          // clean the store
+        }
+
+        set({ error: error.message });
+      }
+      if (error instanceof Error) {
+        set({ error: error.message });
+      }
+      httpReport = { success: false, message: "HTTP Sync failed" };
+    } finally {
+      set({ isSyncingMessages: false });
+    }
+
+    // Check the Pulse: socket.send(PING). Start a 2-second timer.
+    // The Verdict: If PONG arrives -> Do nothing (Socket is healthy). If timer expires without PONG -> Call connect().
+
+    const { status, connect, socket, disconnect } = get();
+    if (socket === null || status === "disconnected" || status === "error") {
+      connect(userId);
+    } else {
+      // ping the server
+      socket.send(JSON.stringify({ type: "PING" }));
+      const timeout = setTimeout(() => {
+        console.warn("Socket Zombie detected! No PONG received.");
+        disconnect();
+        connect(userId);
+      }, 2000);
+      set({ pongTimeout: timeout });
+    }
+  },
 }));
-
-/* Check for existing connection: If get().socket is already open, return (don't double-connect).
-
-Update Status: set({ status: 'connecting' }).
-
-Create Instance: const ws = new WebSocket(process.env.NEXT_PUBLIC_WSS_URL).
-
-The onopen Hook: * Set status: 'connected'.
-
-The Identity: Send ws.send(JSON.stringify({ type: 'IDENTIFY', userId })).
-
-The onmessage Hook:
-
-Take the raw data and pass it to get().handleIncomingMessage(data).
-
-The onclose Hook:
-
-If it was a clean exit (Logout), set status: 'disconnected'.
-
-If it was a crash, set status: 'error' and trigger the Retry Timer.
-
-The onerror Hook:
-
-Set status: 'error' and log the issue.
-
-Store the Socket: set({ socket: ws }). */

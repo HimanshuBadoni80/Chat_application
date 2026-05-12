@@ -28,7 +28,7 @@ export function proxy(request: NextRequest) {
 
   // If trying to access login/signup while ALREADY logged in
   if (isAuthPage && sessionToken) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/chat", request.url));
   }
 
   // Create a new Headers object from the existing ones
@@ -47,7 +47,7 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // protected routes
-    "/dashboard/:path*",
+    "/chat/:path*",
     "/profile/:path*",
     //Auth Areas (to redirect users who are already logged in)
     "/login",

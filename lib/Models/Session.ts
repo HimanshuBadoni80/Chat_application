@@ -2,7 +2,7 @@ import { Schema, model, models, Document } from "mongoose";
 
 export interface ClientSession extends Document {
   sessionToken: string;
-  userId: Schema.Types.ObjectId;
+  user: Schema.Types.ObjectId;
   expiresAt: Date;
   valid: boolean;
   userAgent: string;
@@ -17,7 +17,7 @@ const SessionSchema = new Schema<ClientSession>(
       type: String,
       required: true,
     },
-    userId: {
+    user: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,

@@ -2,13 +2,13 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { messageSchema } from "@/lib/zod/messages/Schemas";
 import { ApiResponse } from "@/lib/types/api";
-import GetSession from "@/lib/auth";
+import GetSession from "@/lib/getSession";
 import { Message, Conversation } from "@/lib/Models/index";
 import { Types } from "mongoose";
 import type { IMessageBase } from "@/lib/Models/index";
 import * as z from "zod";
 import { handleApiError } from "@/lib/error/errorUtil";
-export default async function POST(request: NextRequest) {
+export  async function POST(request: NextRequest) {
   try {
     // get the values
     const body = await request.json();
@@ -54,7 +54,7 @@ export default async function POST(request: NextRequest) {
       });
     }
 
-    const senderId = session.userId._id;
+    const senderId = session.user._id;
 
     const conversation = await Conversation.findOne({
       _id: conversationId, //Look for the specific chat
@@ -123,15 +123,15 @@ export default async function POST(request: NextRequest) {
       }),
     }).catch((err) => console.error("Ws push failed", err));
 
-      const response: ApiResponse<Partial<IMessageBase>> = {
-        success: true,
-        message: "message saved",
-        data: {
-          _id: newMessage._id.tostring(),
-          tempId,
-          status: "sent",
-          createdAt: newMessage.createdAt,
-        }, // send the clean object
+    const response: ApiResponse<Partial<IMessageBase>> = {
+      success: true,
+      message: "message saved",
+      data: {
+        _id: newMessage._id.tostring(),
+        tempId,
+        status: "sent",
+        createdAt: newMessage.createdAt.toISOString(),
+      }, // send the clean object
     };
     return NextResponse.json(response, {
       status: 200,

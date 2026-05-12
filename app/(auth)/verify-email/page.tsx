@@ -16,13 +16,13 @@ function VerifyUser() {
   const searchParams = useSearchParams();
   const urlEmail = searchParams.get("email");
   const token = searchParams.get("token");
-  const from = searchParams.get("from") || "/dashboard";
+  const from = searchParams.get("from") || "/chat";
   const storeEmail = useSignUpStore((state) => state.email);
   const resend = useSignUpStore((state) => state.resend);
   const router = useRouter();
   const [status, setStatus] = useState<PageStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [redirectTo, setRedirectTo] = useState("/dashboard");
+  const [redirectTo, setRedirectTo] = useState("/chat");
 
   useEffect(() => {
     // absolute guard

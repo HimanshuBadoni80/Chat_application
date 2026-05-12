@@ -14,13 +14,14 @@ export interface IMessage extends Document {
 // used in useChatStore , [conversationId]/route.ts, api/messages/send/route.ts
 export interface IMessageBase {
   _id?: string; // Lean objects have string/ObjectId IDs
+  tempId?: string;
   conversationId: string;
   senderId: string;
   content: string;
   messageType: "text" | "image" | "file";
   status?: "sent" | "delivered" | "read" | "pending";
   createdAt: string;
-  tempId?: string;
+  
 }
 
 export interface IMessagePatch {
@@ -34,6 +35,9 @@ export type IncomingMessage = IMessageBase | IMessagePatch;
 
 const MessageSchema = new Schema<IMessage>(
   {
+    tempId: {
+      type: String,
+    },
     conversationId: {
       type: Schema.Types.ObjectId,
       ref: "Conversation",
@@ -64,6 +68,7 @@ const MessageSchema = new Schema<IMessage>(
   },
 );
 
+MessageSchema.index({ tempId: 1 }, { unique: true });
 const Message = models.Message || model<IMessage>("Message", MessageSchema);
 
 export default Message;

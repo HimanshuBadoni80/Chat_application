@@ -66,7 +66,7 @@ export const useSignUpStore = create<SignupState>((set, get) => ({
         }),
       });
 
-      // for not json response
+      // for non json response
       let responseBody: ApiResponse<UserInfo>;
       // get the content type
       const contentType = response.headers.get("content-type");

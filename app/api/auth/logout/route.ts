@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ApiResponse } from "@/lib/types/api";
 import deleteSession from "@/lib/auth/logoutService";
-export default async function POST(request: NextRequest) {
+export  async function POST(request: NextRequest) {
   const successResponse: ApiResponse<{ redirectTo: string }> = {
     success: true,
     message: "logged out successfully",

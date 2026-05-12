@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 
 export default async function CreateSessionAndResponse(
   userId: string,
-  redirectPath: string = "/dashboard",
+  redirectPath: string = "/chat",
   request: NextRequest,
   type: "redirect" | "json" = "redirect",
   message: string,
@@ -18,11 +18,13 @@ export default async function CreateSessionAndResponse(
   const ip = getClientIp(request);
   const newSession = await Session.create({
     sessionToken: hashedToken,
-    userId: userId,
+    user: userId,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     userAgent: request.headers.get("user-agent"),
     ip,
   });
+
+  
   if (!newSession) {
     throw new Error("failed to create new session");
   }

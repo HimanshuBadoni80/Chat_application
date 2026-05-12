@@ -9,7 +9,7 @@ import connectDB from "@/lib/actions/mongodb";
 import { handleApiError } from "@/lib/error/errorUtil";
 
 // the email sender
-export default async function POST(request: NextRequest) {
+export  async function POST(request: NextRequest) {
   /* get the json
        validate json
        call the db
