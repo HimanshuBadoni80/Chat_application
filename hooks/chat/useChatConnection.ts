@@ -1,15 +1,13 @@
 import { useChatStore } from "@/lib/useChatStore";
-
+import toast from "react-hot-toast";
 import { useEffect } from "react";
 
 // it is a custom react hook,
 // A custom hook is just a function that starts with the word "use". This tells React: "Hey, I’m going to use your internal tools (like useState or useEffect) inside this function."
 
 export function useChatConnection() {
-  const { user, connect, disconnect } = useChatStore();
+  const { user, connect, disconnect, unifiedSyncUtility } = useChatStore();
   const userId = user?._id;
-
-  
 
   // if there is a user, we should have a connection
   // if no user, logout , kills the connection
@@ -28,19 +26,36 @@ export function useChatConnection() {
 
   // Environment Listeners (Zombie Tabs & Network)
   /* issue? Modern browsers (especially Chrome and Safari) aggressively throttle or "freeze" JavaScript execution in background tabs to save battery.
-  The Problem: When a user switches back to your chat tab after an hour, the socket might be dead, or worse, it might "burst" 50 missed messages at once, crashing the UI.
+  The Problem: When a user switches back to chat tab after an hour, the socket might be dead, or worse, it might "burst" 50 missed messages at once, crashing the UI.
    */
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
-    function handleOnline() {
-      alert("Network back online. Re-establishing...");
-      // will use <dialog> here
-      // if (userId) connect(userId);
-      // call the unifiedSyncUtility()
+    // toasthandler
+    const runSyncWithToast = async (reason: string) => {
+      // trigger the loading toast
+      const toastId = toast.loading(`Reconnecting... ${reason} `);
+
+      const result = await unifiedSyncUtility(userId);
+
+      if (result.success) {
+        toast.success(result.message, { id: toastId });
+      } else {
+        toast.error(result.message, { id: toastId });
+      }
+    };
+
+    async function handleOffline() {
+      toast.error("You are offline. Waiting for network...", {
+        duration: 4000,
+      });
     }
 
-    function handleVisibilityChange() {
+    async function handleOnline() {
+      await runSyncWithToast("Network restored");
+    }
+
+    async function handleVisibilityChange() {
       if (document.hidden) {
         // set departure time in session storage
         sessionStorage.setItem("away_since", Date.now().toString());
@@ -49,21 +64,21 @@ export function useChatConnection() {
         if (awaySince) {
           const isGreater = Date.now() - new Date(awaySince).getTime() > 30000;
           if (isGreater) {
-            // call the util function
+            await runSyncWithToast("Welcome back");
           }
           sessionStorage.removeItem("away_since");
         }
       }
     }
+
+    window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
-    // add offline event too
     window.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [user?._id]);
+  }, [userId,unifiedSyncUtility]);
 }
-
-

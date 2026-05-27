@@ -115,7 +115,10 @@ export interface ChatStore {
     conversationId: string,
     lastestMessage: IMessageBase,
   ) => updatedIConversation[];
-  // unifiedSyncUtility: ()=> void;
+  unifiedSyncUtility: (userId: string) => Promise<{
+    success: boolean;
+    message: string;
+  }>;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -455,7 +458,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const { status, connect, socket, disconnect } = get();
     if (socket === null || status === "disconnected" || status === "error") {
       connect(userId);
-    } else {
+    }
+    // The socket is fully open and ready for data. don't send without checking the socket is open.
+    else if (socket.readyState === WebSocket.OPEN) {
       // ping the server
       socket.send(JSON.stringify({ type: "PING" }));
       const timeout = setTimeout(() => {
@@ -465,5 +470,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       }, 2000);
       set({ pongTimeout: timeout });
     }
+    //The socket is in the middle of CONNECTING (or CLOSING)
+    else {
+      console.log("Socket is currently connecting, skipping PING");
+    }
+    return httpReport;
   },
 }));

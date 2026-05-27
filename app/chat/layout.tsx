@@ -9,6 +9,8 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import ConversationList from "@/components/chat/sidebar/ConversationList";
+import ChatConnectionManager from "@/components/chat/ChatConnectionManager";
+import { Toaster } from "react-hot-toast";
 export default async function ChatLayout({
   children,
 }: {
@@ -26,6 +28,7 @@ export default async function ChatLayout({
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <StoreInitializer user={session?.user} />
+      <ChatConnectionManager />
       <div className="w-14  border-r-4">sbar</div>
       <ResizablePanelGroup orientation="horizontal">
         {/* chat-list  */}
@@ -43,6 +46,33 @@ export default async function ChatLayout({
           {children}
         </ResizablePanel>
       </ResizablePanelGroup>
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        gutter={8}
+        containerClassName=""
+        containerStyle={{}}
+        toasterId="default"
+        toastOptions={{
+          // Define default options
+          className: "",
+          duration: 5000,
+          removeDelay: 1000,
+          style: {
+            background: "#363636",
+            color: "#fff",
+          },
+
+          // Default options for specific types
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: "green",
+              secondary: "black",
+            },
+          },
+        }}
+      />
     </div>
   );
 }
