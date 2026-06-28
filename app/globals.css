@@ -5,9 +5,20 @@
 @theme {
   /* 1. THE PRIMITIVES (Your Tokens) */
   --color-primary-50: #e6f2f1;
+  --color-primary-100: #cce6e3;
+  --color-primary-300: #66b3ab;
   --color-primary-500: #098175;
   --color-primary-950: #043631;
+  --color-secondary-50: #fff0f0;
   --color-secondary-500: #ff6161;
+  --color-secondary-600: #e54f4f;
+  --color-neutral-50: #f8faf9;
+  --color-neutral-100: #edf2f1;
+  --color-neutral-200: #dce5e3;
+  --color-neutral-400: #7f9390;
+  --color-neutral-500: #607773;
+  --color-neutral-700: #2e4542;
+  --color-neutral-900: #142624;
   --color-neutral-950: #0b1414;
 
   /* 2. TYPOGRAPHY (Your 1.25 Scale) */
@@ -25,11 +36,29 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
   --color-border: var(--border);
   --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
   --radius-xl: var(--radius);
   --radius-lg: calc(var(--radius) - 2px);
@@ -45,11 +74,29 @@
   --background: #fdfcfb;
   --foreground: var(--color-neutral-950);
   --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
   --border: #e2e8f0;
+  --input: #dce5e3;
   --primary: var(--color-primary-500);
   --primary-foreground: #ffffff;
-  --muted: var(--color-neutral-500);
+  --secondary: var(--color-secondary-50);
+  --secondary-foreground: var(--color-secondary-600);
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
+  --accent: var(--color-primary-50);
+  --accent-foreground: var(--color-primary-950);
+  --destructive: #dc2626;
   --ring: var(--color-primary-500);
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--color-primary-50);
+  --sidebar-accent-foreground: var(--color-primary-950);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
   --radius: 0.75rem;
 }
 
@@ -57,10 +104,29 @@
   --background: var(--color-neutral-950);
   --foreground: var(--color-primary-50);
   --card: #142624;
+  --card-foreground: var(--foreground);
+  --popover: #142624;
+  --popover-foreground: var(--foreground);
   --border: var(--color-primary-950);
+  --input: var(--color-neutral-700);
   --primary: var(--color-primary-500);
   --primary-foreground: var(--color-primary-50);
-  --muted: var(--color-primary-300);
+  --secondary: var(--color-secondary-500);
+  --secondary-foreground: #ffffff;
+  --muted: var(--color-neutral-900);
+  --muted-foreground: var(--color-primary-300);
+  --accent: var(--color-primary-950);
+  --accent-foreground: var(--color-primary-50);
+  --destructive: #f87171;
+  --ring: var(--color-primary-300);
+  --sidebar: #10201e;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--color-primary-950);
+  --sidebar-accent-foreground: var(--color-primary-50);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 /* 6. THE GLOBAL DEFAULTS */

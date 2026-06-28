@@ -31,9 +31,9 @@ export default function ConversationItem({
   return (
     <Button
       onClick={handleRouting}
-      variant="ghost"
-      className={`w-full px-3 py-3 h-auto flex items-center justify-start gap-3 cursor-pointer rounded-none border-0 border-b border-border ${
-        conversation.isActive ? "bg-accent text-accent-foreground" : ""
+      variant="default"
+      className={`w-full px-3 py-3 h-auto flex items-center justify-start gap-3 cursor-pointer rounded-none bg-primary-500/50  border-b border-border hover:bg-primary-500 ${
+        conversation.isActive ? "bg-primary-500" : ""
       }`}
     >
       {/* Avatar Section: Fixed size circle. 'shrink-0' prevents it from squishing when text is long. */}

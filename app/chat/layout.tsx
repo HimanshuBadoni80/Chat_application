@@ -3,12 +3,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import StoreInitializer from "@/components/StoreInitializer";
 import type { updatedClientSession } from "@/lib/types/Conversation";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import ConversationList from "@/components/chat/sidebar/ConversationList";
+import DesktopLayout from "@/components/screenLayouts/DesktopLayout";
 import ChatConnectionManager from "@/components/chat/ChatConnectionManager";
 import { Toaster } from "react-hot-toast";
 export default async function ChatLayout({
@@ -16,36 +11,69 @@ export default async function ChatLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session: updatedClientSession = await GetSession();
+  const headerList = await headers();
+  const currentRoute = headerList.get("x-url") || "/chat"; // header from proxy.ts
+  let session: updatedClientSession | null;
+
+  try {
+    session = await GetSession();
+  } catch (error) {
+    console.error("Chat session lookup failed:", error);
+    return <ChatSessionUnavailable retryHref={currentRoute} />;
+  }
 
   if (!session) {
-    const headerList = await headers();
-    const currentRoute = headerList.get("x-url") || "/chat"; // header from proxy.ts
     redirect(`/login?from=${encodeURIComponent(currentRoute)}&reason=expired`);
   }
 
-  // check for new user without the username( null value). return a different component asking to set username.
+  const username = session.user.username;
+
+  if (!username) {
+      redirect("/chat/setUsername");
+    }
+    // return (
+    //   <div className="flex h-screen w-full overflow-hidden">
+    //     {children}
+    //     <Toaster
+    //       position="top-center"
+    //       reverseOrder={false}
+    //       gutter={8}
+    //       toasterId="default"
+    //       toastOptions={{
+    //         className: "",
+    //         duration: 5000,
+    //         removeDelay: 1000,
+    //         style: {
+    //           background: "#363636",
+    //           color: "#fff",
+    //         },
+    //         success: {
+    //           duration: 3000,
+    //           iconTheme: {
+    //             primary: "green",
+    //             secondary: "black",
+    //           },
+    //         },
+    //       }}
+    //     />
+    //   </div>
+    // );
+  
+
+  // if (currentRoute === "/chat/setUsername") {
+  //   redirect("/chat");
+  // }
+
+  const user = {
+    ...session.user,
+    username,
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <StoreInitializer user={session?.user} />
+      <StoreInitializer user={user} />
       <ChatConnectionManager />
-      <div className="w-14  border-r-4">sbar</div>
-      <ResizablePanelGroup orientation="horizontal">
-        {/* chat-list  */}
-        <ResizablePanel defaultSize="50%" className="flex-1 h-full">
-          <ConversationList />
-        </ResizablePanel>
-        <ResizableHandle className="w-1" disableDoubleClick />
-        {/* chat-window */}
-        <ResizablePanel
-          defaultSize="50%"
-          className="flex-1 h-full"
-          maxSize="75%"
-          minSize="50%"
-        >
-          {children}
-        </ResizablePanel>
-      </ResizablePanelGroup>
+      <DesktopLayout>{children}</DesktopLayout>
       <Toaster
         position="top-center"
         reverseOrder={false}
@@ -74,5 +102,27 @@ export default async function ChatLayout({
         }}
       />
     </div>
+  );
+}
+
+function ChatSessionUnavailable({ retryHref }: { retryHref: string }) {
+  return (
+    <main className="flex h-screen w-full items-center justify-center bg-background px-4">
+      <section className="w-full max-w-md rounded-lg border border-border bg-card p-6 text-center shadow-sm">
+        <h1 className="text-xl font-semibold text-foreground">
+          Chat is temporarily unavailable
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          We could not verify your session because the database is not
+          responding. Your login was not cleared.
+        </p>
+        <a
+          href={retryHref}
+          className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+        >
+          Try again
+        </a>
+      </section>
+    </main>
   );
 }

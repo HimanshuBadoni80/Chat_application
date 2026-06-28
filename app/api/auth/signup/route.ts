@@ -1,13 +1,11 @@
-
-import { ApiResponse,UserInfo } from "@/lib/types/api";
+import { ApiResponse, UserInfo } from "@/lib/types/api";
 import connectDB from "@/lib/actions/mongodb";
 import User from "@/lib/Models/User";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/mail/mail";
-import {handleApiError} from "@/lib/error/errorUtil";
-import {signUpSchema} from "@/lib/zod/zodSchemas";
-import {z} from "zod";
-
+import { handleApiError } from "@/lib/error/errorUtil";
+import { signUpSchema } from "@/lib/zod/zodSchemas";
+import { z } from "zod";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -60,7 +58,7 @@ export async function POST(request: Request) {
           Object.entries(flattened.fieldErrors).map(([key, value]) => [
             key,
             value?.[0] || "Invalid",
-          ])
+          ]),
         ),
       },
     };
@@ -101,7 +99,7 @@ export async function POST(request: Request) {
 
     //  Only send the email if the save was successful!
     if (newUser) {
-      await sendEmail(validation.data.userEmail, token,"/verify-email",null);
+      await sendEmail(validation.data.userEmail, token, "/verify-email", null);
       const response: ApiResponse<UserInfo> = {
         success: true,
         message: "Verification email sent!",

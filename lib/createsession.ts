@@ -5,10 +5,10 @@ import type { NextRequest } from "next/server";
 
 export default async function CreateSessionAndResponse(
   userId: string,
-  redirectPath: string = "/chat",
   request: NextRequest,
   type: "redirect" | "json" = "redirect",
   message: string,
+  redirectPath?: string,
 ) {
   const rawToken = crypto.randomBytes(32).toString("base64url");
   const hashedToken = crypto
@@ -24,21 +24,24 @@ export default async function CreateSessionAndResponse(
     ip,
   });
 
-  
   if (!newSession) {
     throw new Error("failed to create new session");
   }
 
-  const requestUrl = new URL(request.url);
+  // if redirectPath is present, meaning- login or verify said redirect to set-username, top priority.
+  // else priortise from parameter.
+  // if not present default to /chat.
 
-  const redirectTo = requestUrl.searchParams.get("from") || redirectPath;
+  const from = request.nextUrl.searchParams.get("from");
+  const safeFrom =
+    from?.startsWith("/") && !from.startsWith("//") ? from : "/chat";
 
-  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : redirectPath;
+  const redirectTo = redirectPath ?? safeFrom;
 
   let response;
 
   if (type === "redirect") {
-    response = NextResponse.redirect(new URL(safeRedirect, request.url));
+    response = NextResponse.redirect(new URL(redirectTo, request.url));
   } else {
     // for verify api and login api
 
@@ -47,7 +50,7 @@ export default async function CreateSessionAndResponse(
         success: true,
         message,
         data: {
-          redirectTo: safeRedirect, // safe cause signup process erases any "from" parameter
+          redirectTo: redirectTo,
         },
       },
       {

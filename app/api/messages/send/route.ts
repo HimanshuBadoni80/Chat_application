@@ -5,16 +5,12 @@ import { ApiResponse } from "@/lib/types/api";
 import GetSession from "@/lib/getSession";
 import { Message, Conversation } from "@/lib/Models/index";
 import { Types } from "mongoose";
-import type { IMessageBase } from "@/lib/Models/index";
+import type { IMessageBase, IMessagePatch } from "@/lib/Models/index";
 import * as z from "zod";
 import { handleApiError } from "@/lib/error/errorUtil";
-export  async function POST(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    // get the values
     const body = await request.json();
-    /* body will have
-      {conversationId,content,messageType,receiverId,temp}
-    */
     const validation = messageSchema.safeParse(body);
     if (!validation.success) {
       const flattened = z.flattenError(validation.error);
@@ -123,11 +119,11 @@ export  async function POST(request: NextRequest) {
       }),
     }).catch((err) => console.error("Ws push failed", err));
 
-    const response: ApiResponse<Partial<IMessageBase>> = {
+    const response: ApiResponse<IMessagePatch> = {
       success: true,
       message: "message saved",
       data: {
-        _id: newMessage._id.tostring(),
+        _id: newMessage._id.toString(),
         tempId,
         status: "sent",
         createdAt: newMessage.createdAt.toISOString(),

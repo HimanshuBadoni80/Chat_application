@@ -1,19 +1,17 @@
 // for route/send
 import * as z from "zod";
-import { initChatSchema } from "../conversation/Schemas";
+// import { initChatSchema } from "../conversation/Schemas";
 
 // used in api/message/send
 export const messageSchema = z.object({
-  tempId:z.string(),
+  tempId: z.string(),
   conversationId: z.string().min(1, { error: "Conversation ID is required" }),
   content: z
     .string()
     .min(1, { error: "Message cannot be empty" })
     .max(2000, { error: "Message too long" }),
   messageType: z.enum(["text", "image", "file"]).default("text"),
-  receiverId: initChatSchema,
 });
-
 
 export const payloadSchema = z.object({
   _id: z.string(),
@@ -40,4 +38,19 @@ export const SocketMessageSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+const isMongoObjectId = (value: string) => /^[a-f\d]{24}$/i.test(value);
+
+export const historyFetchSchema = z.object({
+  conversationId: z.string().refine(isMongoObjectId, {
+    error: "Invalid conversation ID",
+  }),
+  createdAt: z.coerce
+    .date({
+      error: "Invalid createdAt date",
+    })
+    .optional(),
+});
+
 export type SocketMessage = z.infer<typeof SocketMessageSchema>;
+export type msgSchema = z.infer<typeof messageSchema>;
+export type HistoryFetchSchema = z.infer<typeof historyFetchSchema>;

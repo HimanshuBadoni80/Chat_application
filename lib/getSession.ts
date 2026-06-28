@@ -5,21 +5,31 @@ import connectDB from "./actions/mongodb";
 import { Session } from "./Models/index";
 import { cookies } from "next/headers";
 
+export class SessionLookupError extends Error {
+  cause: unknown;
+
+  constructor(message: string, cause: unknown) {
+    super(message);
+    this.name = "SessionLookupError";
+    this.cause = cause;
+  }
+}
+
 export default async function GetSession() {
+  const cookieStore = await cookies();
+  const rawToken = cookieStore.get("session_token")?.value;
+
+  // if no token found
+  if (!rawToken) {
+    return null;
+  }
+
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(rawToken)
+    .digest("hex");
+
   try {
-    const cookieStore = await cookies();
-    const rawToken = cookieStore.get("session_token")?.value;
-
-    // if no token found
-    if (!rawToken) {
-      return null;
-    }
-
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(rawToken)
-      .digest("hex");
-
     await connectDB();
 
     const session = await Session.findOne({
@@ -39,6 +49,6 @@ export default async function GetSession() {
     return session;
   } catch (error) {
     console.error("failed to get session:", error);
-    return null; //Return null so the UI can redirect to login safely
+    throw new SessionLookupError("Unable to verify session right now", error);
   }
 }

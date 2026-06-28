@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Figtree } from "next/font/google";
+import { Figtree, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemesProvider } from "@/components/providers/theme-provider";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,8 @@ const inter = Inter({
 
 // The Metadata Object
 export const metadata: Metadata = {
-  title: "next-chat-app",
+  title: "Next Chat App",
+  description: "A modern chat application.",
 };
 
 export default function RootLayout({
@@ -38,9 +39,9 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("font-sans", figtree.variable)}
+      className={cn(figtree.variable, inter.variable)}
     >
-      <body className={`${inter.variable} $ antialiased`}>
+      <body className="antialiased">
         <ThemesProvider
           attribute="class"
           defaultTheme="system"

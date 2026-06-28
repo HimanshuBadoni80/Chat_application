@@ -1,4 +1,3 @@
-
 import connectDB from "@/lib/actions/mongodb";
 import User from "@/lib/Models/User";
 
@@ -10,7 +9,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import CreateSessionAndResponse from "@/lib/createsession";
 
-export  async function POST(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const body = await request.json();
   const validation = zodLogin.safeParse(body);
 
@@ -75,14 +74,16 @@ export  async function POST(request: NextRequest) {
       });
     }
 
-    //if user exists
+
+    // if no username
+    const redirectPath = user.username ? undefined : "/set-username";
 
     const response = await CreateSessionAndResponse(
       user._id,
-      "/chat",
       request,
       "json",
       "Logged in successfully",
+      redirectPath
     );
     return response;
   } catch (error) {
@@ -104,5 +105,3 @@ export  async function POST(request: NextRequest) {
     );
   }
 }
-
-

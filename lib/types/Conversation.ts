@@ -11,7 +11,7 @@ export type updatedClientSession = Omit<ClientSession, "_id" | "user"> & {
   user: {
     _id: string;
     uid: string;
-    username: string;
+    username: string | null;
     email: string;
     isVerified: boolean;
   };

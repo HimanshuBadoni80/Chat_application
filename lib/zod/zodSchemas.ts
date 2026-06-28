@@ -65,3 +65,14 @@ export const resetPasswordSchema = z
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
+
+export const usernameSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, { error: "Username must be at least 3 characters" })
+    .max(20, { error: "Username must be at most 20 characters" })
+    .regex(/^[a-zA-Z0-9_ ]+$/, {
+      error: "Use letters, numbers, spaces, or underscores only",
+    }),
+});

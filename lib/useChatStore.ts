@@ -1,9 +1,14 @@
 import { create } from "zustand";
-import type { IMessageBase, IncomingMessage } from "./Models/message";
+import type {
+  IMessageBase,
+  IncomingMessage,
+  IMessagePatch,
+} from "./Models/message";
 import { SocketMessageSchema } from "./zod/messages/Schemas";
 import type { updatedIConversation } from "./types/Conversation";
 import apiFetch from "./fetchapi/fetchWrapper";
 import { ApiResponse, isApiResponse } from "./types/api";
+import { msgSchema } from "./zod/messages/Schemas";
 // hepler function checks for duplicate messages
 const mergeAndDedupe = (
   existing: IMessageBase[],
@@ -63,6 +68,11 @@ function hasRedirectTo(data: unknown): data is { redirectTo: string } {
   );
 }
 
+interface historyProps {
+  hasReachedTop: boolean;
+  isFetchingHistory: boolean;
+  historyError: string | null;
+}
 export interface ChatStore {
   user: {
     _id: string;
@@ -77,7 +87,7 @@ export interface ChatStore {
   isIdentified: boolean; // Confirms the { type: "IDENTIFY" } worked
   pongTimeout: ReturnType<typeof setTimeout> | null;
   error: string | null;
-
+  historyError: string | null;
   // the data
   messages: Record<string, IMessageBase[]>;
   lastSyncedAt: string | null;
@@ -88,6 +98,8 @@ export interface ChatStore {
   // UI lifecycle
   isLoadingConversations: boolean;
   isLoadingMessages: boolean;
+  historyStateByConversation: Record<string, historyProps>;
+
   reconnectTimeout: ReturnType<typeof setTimeout> | null;
   retryCount: number;
 
@@ -109,6 +121,8 @@ export interface ChatStore {
   // Logic to update the "Drawers"
   addMessage: (conversationId: string, message: IncomingMessage) => void;
   setMessage: (conversationId: string, message: IncomingMessage[]) => void;
+  sendMessage: (conversationId: string, text: string) => Promise<void>;
+  fetchOlderMessages: (conversationId: string) => Promise<void>;
   setActiveConversationId: (Id: string) => void;
   setConversations: () => Promise<void>;
   bumpConvs: (
@@ -128,6 +142,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   isIdentified: false,
   pongTimeout: null,
   error: null,
+  historyError: null,
   messages: {},
   lastSyncedAt: null,
   isSyncingMessages: false,
@@ -135,6 +150,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   activeConversationId: null,
   isLoadingConversations: false,
   isLoadingMessages: false,
+  historyStateByConversation: {},
   reconnectTimeout: null,
   retryCount: 0,
   setAuth: function (user: {
@@ -329,6 +345,207 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       };
     });
   },
+  sendMessage: async function (conversationId: string, text: string) {
+    const { user, addMessage } = get();
+
+    if (!user) {
+      console.error("Critica; Error: tried to send message without a user");
+      window.location.href = "/login";
+      return;
+    }
+    const tempId = crypto.randomUUID(); // native browser UUID
+    // create a IMessageBase message obj
+    const newMessage: IMessageBase = {
+      tempId,
+      conversationId,
+      senderId: user._id,
+      content: text,
+      messageType: "text",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    // call the addmessage()
+    addMessage(conversationId, newMessage);
+
+    // DTO for send api
+    const msgForApi: msgSchema = {
+      tempId,
+      conversationId,
+      content: text,
+      messageType: "text",
+    };
+
+    try {
+      // send the message
+      const result = await apiFetch<IMessagePatch>(`api/messages/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(msgForApi),
+      });
+
+      addMessage(conversationId, result);
+    } catch (error) {
+      if (isApiResponse(error)) {
+        if (error.error?.code === "NO_ACTIVE_SESSION") {
+          const basePath = hasRedirectTo(error.data)
+            ? error.data.redirectTo
+            : "/login";
+          const url = new URL(basePath, window.location.origin);
+          url.searchParams.set("reason", "session_expired");
+
+          get().disconnect();
+
+          window.location.href = url.toString();
+        }
+
+        set({ error: error.message });
+      }
+      if (error instanceof Error) {
+        set({ error: error.message });
+      }
+    }
+  },
+  fetchOlderMessages: async function (conversationId: string) {
+    const { messages, setMessage, historyStateByConversation } = get();
+
+    // is the conversation registered
+    const historyObj = historyStateByConversation[conversationId];
+
+    // history found then
+    if (
+      historyObj &&
+      (historyObj.isFetchingHistory || historyObj.hasReachedTop)
+    ) {
+      return;
+    } else if (!historyObj) {
+      set((state) => {
+        const registerHistory: historyProps = {
+          hasReachedTop: false,
+          isFetchingHistory: true,
+          historyError: null,
+        };
+        return {
+          historyStateByConversation: {
+            ...state.historyStateByConversation,
+            [conversationId]: registerHistory,
+          },
+        };
+      });
+    } else {
+      set((state) => {
+        return {
+          historyStateByConversation: {
+            ...state.historyStateByConversation,
+            [conversationId]: {
+              hasReachedTop: false,
+              isFetchingHistory: true,
+              historyError: null,
+            },
+          },
+        };
+      });
+    }
+
+    // // why check the conversation, because the setConversation() does not create an array with the id. so in the message record, the array is undefined.
+    // // look for the conversation with the conversationId
+
+    // const hasLastMessage = conversations.find(
+    //   (conv) => conv._id === conversationId,
+    // )?.lastMessage;
+    // if (!hasLastMessage) return;
+
+    const currentMessages = messages[conversationId];
+    // Possible runtime crash when messages are unavailable
+    if (!currentMessages || currentMessages.length === 0) {
+      set((state) => {
+        return {
+          historyStateByConversation: {
+            ...state.historyStateByConversation,
+            [conversationId]: {
+              hasReachedTop: false,
+              isFetchingHistory: false,
+              historyError: null,
+            },
+          },
+        };
+      });
+      return;
+    }
+
+    const { createdAt } = currentMessages[0]; // from the oldest array
+
+    try {
+      const response = await apiFetch<ApiResponse<IMessageBase[]>>(
+        `api/messages/${conversationId}?before=${createdAt}`,
+      );
+      // Stop fetching if we hit the very beginning of the chat
+      if (!response.data || response.data.length === 0) {
+        set((state) => {
+          return {
+            historyStateByConversation: {
+              ...state.historyStateByConversation,
+              [conversationId]: {
+                hasReachedTop: true,
+                isFetchingHistory: false,
+                historyError: null,
+              },
+            },
+          };
+        });
+        return;
+      }
+      setMessage(conversationId, response.data);
+    } catch (error) {
+      let err = "Failed to fetch older messages.";
+      if (isApiResponse(error)) {
+        if (error.error?.code === "NO_ACTIVE_SESSION") {
+          const basePath = hasRedirectTo(error.data)
+            ? error.data.redirectTo
+            : "/login";
+          const url = new URL(basePath, window.location.origin);
+          url.searchParams.set("reason", "session_expired");
+
+          get().disconnect();
+
+          window.location.href = url.toString();
+        }
+        err = error.message;
+      }
+      if (error instanceof Error) {
+        err = error.message;
+      }
+      set((state) => {
+        return {
+          historyStateByConversation: {
+            ...state.historyStateByConversation,
+            [conversationId]: {
+              hasReachedTop: false,
+              isFetchingHistory: false,
+              historyError: err,
+            },
+          },
+        };
+      });
+    } finally {
+      set((state) => {
+        const { hasReachedTop, historyError } =
+          state.historyStateByConversation[conversationId];
+        return {
+          historyStateByConversation: {
+            ...state.historyStateByConversation,
+            [conversationId]: {
+              hasReachedTop,
+              isFetchingHistory: false,
+              historyError,
+            },
+          },
+        };
+      });
+    }
+  },
   setActiveConversationId: (ConversationId: string) =>
     set({ activeConversationId: ConversationId }),
   setConversations: async () => {
@@ -434,12 +651,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
       if (isApiResponse(error)) {
         if (error.error?.code === "NO_ACTIVE_SESSION") {
-          const redirectTo = hasRedirectTo(error.data)
+          const basePath = hasRedirectTo(error.data)
             ? error.data.redirectTo
             : "/login";
+          const url = new URL(basePath, window.location.origin);
+          url.searchParams.set("reason", "session_expired");
 
-          window.location.href = redirectTo;
-          // clean the store
+          get().disconnect();
+
+          window.location.href = url.toString();
         }
 
         set({ error: error.message });

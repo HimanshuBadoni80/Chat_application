@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 
 export interface IUser extends Document {
   uid: string;
-  username: string;
+  username: string | null;
   email: string;
   password: string;
   isVerified: boolean;

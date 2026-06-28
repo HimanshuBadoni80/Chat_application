@@ -5,7 +5,8 @@ import connectDB from "@/lib/actions/mongodb";
 import { handleApiError } from "@/lib/error/errorUtil";
 import { Message, Conversation, IMessageBase } from "@/lib/Models";
 import GetSession from "@/lib/getSession";
-
+import { historyFetchSchema } from "@/lib/zod/messages/Schemas";
+import * as z from "zod";
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> },
@@ -20,6 +21,34 @@ export async function GET(
   try {
     // get the id from params
     const { conversationId } = await params;
+    const before = request.nextUrl.searchParams.get("before");
+
+    // validate the data
+    const validation = historyFetchSchema.safeParse({
+      conversationId,
+      createdAt: before || undefined,
+    });
+
+    if (!validation.success) {
+      const flattened = z.flattenError(validation.error);
+      const response: ApiResponse = {
+        success: false,
+        message: "invalid credentials",
+        error: {
+          code: "VALIDATION_ERROR",
+          details: Object.fromEntries(
+            Object.entries(flattened.fieldErrors).map(([key, value]) => [
+              key,
+              value?.[0] || "Invalid",
+            ]),
+          ),
+        },
+      };
+      return NextResponse.json(response, { status: 400 });
+    }
+
+    const ConversationId = validation.data.conversationId;
+    const beforeThisDate = validation.data.createdAt;
 
     // connect the DB
     await connectDB();
@@ -48,7 +77,7 @@ export async function GET(
 
     // check if the currentUser is participant or not
     const conversation = await Conversation.findOne({
-      _id: conversationId,
+      _id: ConversationId,
       participants: currentUserId, // { $elemMatch: { $eq: currentUserId } }
     }).select("_id");
 
@@ -66,7 +95,10 @@ export async function GET(
     }
 
     // fetch the last 20 messages
-    const messages = await Message.find({ conversationId })
+    const messages = await Message.find({
+      conversationId: ConversationId,
+      createdAt: { $lt: beforeThisDate ?? new Date() },
+    })
       .sort({ createdAt: -1 }) // descending order, latest date is larger than the older one
       .limit(20)
       .lean();
@@ -76,7 +108,7 @@ export async function GET(
     // clean DTO Data Transfer Object
     const cleanMessages: IMessageBase[] = oldestToNewMessages.map((msg) => ({
       _id: msg._id.toString(),
-      tempId: msg.tempId.toString(),
+      tempId: msg.tempId ? msg.tempId.toString() : undefined,
       conversationId: msg.conversationId.toString(),
       senderId: msg.senderId.toString(),
       content: msg.content,

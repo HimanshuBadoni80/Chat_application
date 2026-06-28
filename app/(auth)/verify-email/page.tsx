@@ -73,8 +73,13 @@ function VerifyUser() {
       isActive = false;
     };
   }, [token, urlEmail, router, storeEmail, from]);
+
   if (status === "checking") return <VerifyLoader />;
-  if (status === "success") return <Success redirectTo={redirectTo} />;
+
+  if (status === "success") {
+    return <Success redirectTo={redirectTo} />;
+  }
+  
   if (status === "error")
     return (
       <ErrorMessage

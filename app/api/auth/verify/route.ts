@@ -98,11 +98,10 @@ export async function GET(request: NextRequest) {
     // if verified, create a session and redirect to dashboard.
     const response = await CreateSessionAndResponse(
       user._id,
-      "/chat",
       request,
       "json",
       "Email verified successfully",
-    
+      "/set-username",
     );
     return response;
   } catch (error) {
