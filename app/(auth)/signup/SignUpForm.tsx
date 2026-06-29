@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSignUpStore } from "@/lib/store";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function SingUpForm() {
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const email = useSignUpStore((state) => state.email);
   const status = useSignUpStore((state) => state.status);
@@ -62,18 +64,31 @@ export default function SingUpForm() {
           >
             Password
           </label>
-          <div className="mt-2">
+          <div className="relative mt-2">
             <input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               required
               placeholder="••••••••"
               value={password}
               onChange={(event) => setPassword(event.target.value.trim())}
-              className="block w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground shadow-sm transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 sm:text-sm"
+              className="block w-full rounded-xl border border-input bg-background py-3 pl-4 pr-12 text-foreground shadow-sm transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 sm:text-sm"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              className="absolute inset-y-0 right-0 flex items-center px-4 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Eye className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
           </div>
           {error?.password && (
             <p className="mt-2 text-sm text-destructive">{error.password}</p>

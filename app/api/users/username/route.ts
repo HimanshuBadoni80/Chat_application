@@ -70,12 +70,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json(response, { status: 409 });
     }
 
-    await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       session.user._id,
       { $set: { username } },
-      { runValidators: true },
+      { new: true, runValidators: true },
     );
-
 
     /* The most common placement for revalidatePath is inside a Server Action after a database mutation (Insert, Update, Delete)  
     
@@ -89,10 +88,11 @@ export async function PATCH(request: Request) {
     /* Example: revalidatePath('/blog', 'layout') will instantly clear the cache for /blog, /blog/post-1, /blog/post-2, and any other nested route */
     revalidatePath("/chat", "layout");
 
-    const response: ApiResponse<{ username: string; redirectTo: string }> = {
+    const response: ApiResponse<{ uid:string, username: string;redirectTo: string }> = {
       success: true,
       message: "Username updated",
       data: {
+        uid: updatedUser.uid,
         username,
         redirectTo: "/chat",
       },

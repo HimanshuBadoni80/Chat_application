@@ -29,40 +29,8 @@ export default async function ChatLayout({
   const username = session.user.username;
 
   if (!username) {
-      redirect("/chat/setUsername");
-    }
-    // return (
-    //   <div className="flex h-screen w-full overflow-hidden">
-    //     {children}
-    //     <Toaster
-    //       position="top-center"
-    //       reverseOrder={false}
-    //       gutter={8}
-    //       toasterId="default"
-    //       toastOptions={{
-    //         className: "",
-    //         duration: 5000,
-    //         removeDelay: 1000,
-    //         style: {
-    //           background: "#363636",
-    //           color: "#fff",
-    //         },
-    //         success: {
-    //           duration: 3000,
-    //           iconTheme: {
-    //             primary: "green",
-    //             secondary: "black",
-    //           },
-    //         },
-    //       }}
-    //     />
-    //   </div>
-    // );
-  
-
-  // if (currentRoute === "/chat/setUsername") {
-  //   redirect("/chat");
-  // }
+    redirect("/set-username");
+  }
 
   const user = {
     ...session.user,
