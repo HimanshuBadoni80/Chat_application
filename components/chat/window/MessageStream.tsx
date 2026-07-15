@@ -1,4 +1,4 @@
-import { useChatStore } from "@/lib/useChatStore";
+import { useChatStore } from "@/lib/store/chatStore/useChatStore";
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import { ArrowDown } from "lucide-react";

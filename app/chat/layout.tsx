@@ -23,7 +23,11 @@ export default async function ChatLayout({
   }
 
   if (!session) {
-    redirect(`/login?from=${encodeURIComponent(currentRoute)}&reason=expired`);
+    // Cookie mutation is not allowed in a Server Component. Redirect through a
+    // Route Handler so it can expire the stale browser cookie first.
+    redirect(
+      `/api/auth/session-expired?from=${encodeURIComponent(currentRoute)}`,
+    );
   }
 
   const username = session.user.username;

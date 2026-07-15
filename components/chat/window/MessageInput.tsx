@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Send } from "lucide-react";
-import { useChatStore } from "@/lib/useChatStore";
+import { useChatStore } from "@/lib/store/chatStore/useChatStore";
 import { Button } from "@/components/ui/button";
 
 export default function MessageInput({

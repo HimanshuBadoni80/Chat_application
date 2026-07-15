@@ -10,7 +10,7 @@ declare global {
   var mongoose: MongooseCache | undefined;
 }
 
-const MONGODB_URL = process.env.MONGODB_URL;
+const MONGODB_URL = process.env.MONGODB_URI;
 
 const cached: MongooseCache = global.mongoose || { conn: null, promise: null };
 

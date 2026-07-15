@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSignUpStore } from "@/lib/store";
+import { useSignUpStore } from "@/lib/store/authStore/store";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function SingUpForm() {

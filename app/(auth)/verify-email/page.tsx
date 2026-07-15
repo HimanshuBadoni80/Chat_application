@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { useSignUpStore } from "@/lib/store";
+import { useSignUpStore } from "@/lib/store/authStore/store";
 import apiFetch from "@/lib/fetchapi/fetchWrapper";
 import { ApiResponse } from "@/lib/types/api";
 import CheckInboxView from "./components/checkInboxView";
@@ -79,7 +79,7 @@ function VerifyUser() {
   if (status === "success") {
     return <Success redirectTo={redirectTo} />;
   }
-  
+
   if (status === "error")
     return (
       <ErrorMessage

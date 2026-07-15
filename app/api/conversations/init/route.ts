@@ -8,7 +8,7 @@ import GetSession from "@/lib/getSession";
 import { handleApiError } from "@/lib/error/errorUtil";
 
 export  async function POST(request: NextRequest) {
-  /* 🛠️ The Corrected Logic Flow
+/* 🛠️ The Corrected Logic Flow
 The Request: Frontend sends only the receiverId.
 
 The Identity Check: The Backend looks at the session_token in the cookie to find out who is making the request (the senderId).
@@ -21,7 +21,8 @@ If not found: Create the new Conversation and return the new conversationId.
 
 The Transition: The Frontend receives the ID and redirects the user to the chat page (e.g., /chat/[conversationId]).
 
-The "Hydration": Once on that page, the app fetches the old messages and connects the WebSocket. */
+The "Hydration": Once on that page, the app fetches the old messages and connects the WebSocket. 
+*/
   try {
     const body = await request.json();
 
@@ -64,7 +65,7 @@ The "Hydration": Once on that page, the app fetches the old messages and connect
       });
     }
 
-    const senderId = session.userId._id;
+    const senderId = session.user._id;
 
     // find the receiver by Public uid (nanoid)
     const receiver = await User.findOne({ uid: validation.data }).select("_id");

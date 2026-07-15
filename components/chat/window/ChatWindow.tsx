@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import MessageStream from "./MessageStream";
 import MessageInput from "./MessageInput";
 import ContactNotFound from "./ContactNotFound";
-import { useChatStore } from "@/lib/useChatStore";
+import { useChatStore } from "@/lib/store/chatStore/useChatStore";
 
 export default function ChatWindow({
   conversationId,

@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import type { ConversationPreview } from "./ConversationList";
+import type { ConversationPreview } from "./ChatSideBar";
 import { Button } from "@/components/ui/button";
 import { Clock, Check, CheckCheck } from "lucide-react";
 

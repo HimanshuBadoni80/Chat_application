@@ -1,4 +1,4 @@
-import { useChatStore } from "@/lib/useChatStore";
+import { useChatStore } from "@/lib/store/chatStore/useChatStore";
 import toast from "react-hot-toast";
 import { useEffect } from "react";
 
@@ -80,5 +80,5 @@ export function useChatConnection() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [userId,unifiedSyncUtility]);
+  }, [userId, unifiedSyncUtility]);
 }

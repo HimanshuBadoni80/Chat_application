@@ -1,8 +1,11 @@
 import { Schema, model, Document, models } from "mongoose";
 import { customAlphabet } from "nanoid";
 import bcrypt from "bcrypt";
+import Session from "./Session";
+import Conversation from "./conversation";
+import Message from "./message";
+import Contact from "./contact";
 // typescript interface for User document
-
 export interface IUser extends Document {
   uid: string;
   username: string | null;
@@ -24,7 +27,7 @@ const UserSchema = new Schema<IUser>(
   {
     uid: {
       type: String,
-      default: nanoid(),
+      default: () => nanoid(),
     },
     username: {
       type: String,
@@ -100,6 +103,57 @@ UserSchema.pre("save", async function () {
   }
 });
 
+UserSchema.pre(
+  "deleteOne",
+  { document: false, query: true },
+  async function () {
+    const dbSession = this.getOptions().session;
+
+    if (!dbSession) {
+      throw new Error("User deletion must run inside a transaction");
+    }
+
+    const userQuery = this.model.findOne(this.getFilter()).select("_id");
+
+    if (dbSession) {
+      userQuery.session(dbSession); // chaining the session
+    }
+
+    const user = await userQuery;
+    if (!user) return;
+
+    const conversationIds = await Conversation.find({
+      participants: user._id,
+    })
+      .distinct("_id")
+      .session(dbSession);
+
+    const ContactIds = await Contact.find({
+      ownerId: user._id,
+    })
+      .distinct("_id")
+      .session(dbSession);
+
+    // the session is passed as an option object in the arguments
+    await Message.deleteMany(
+      { conversationId: { $in: conversationIds } },
+      { session: dbSession },
+    );
+
+    await Conversation.deleteMany(
+      { _id: { $in: conversationIds } },
+      { session: dbSession },
+    );
+
+    await Contact.deleteMany(
+      { _id: { $in: ContactIds } },
+      { session: dbSession },
+    );
+
+    await Session.deleteMany({ user: user._id }, { session: dbSession });
+  },
+);
+
 UserSchema.index({ uid: 1 }, { unique: true });
 UserSchema.index({ email: 1 }, { unique: true });
 // UserSchema.index({verifyTokenExpiry: 1}, {expireAfterSeconds: 36000})
@@ -107,3 +161,35 @@ UserSchema.index({ email: 1 }, { unique: true });
 const User = models.User || model<IUser>("User", UserSchema);
 
 export default User;
+
+/* Which operations support middleware?
+save
+validate
+deleteOne
+updateOne
+find
+findOne
+findOneAndUpdate
+aggregate
+init
+*/
+
+/* uid: {
+      type: String,
+      default: () => nanoid(),
+    }, 
+    
+    earlier version
+
+    uid: {
+      type: String,
+      default: nanoid,
+    },
+
+    why the change: function type-> const nanoid: (size?: number | undefined) => string
+
+    the function supports an optional size override.
+    Mongoose’s TypeScript definitions for a string default are stricter and expect a factory shaped like: () => string
+    so the wrapper () => nanoid()  was needed.
+    
+    */

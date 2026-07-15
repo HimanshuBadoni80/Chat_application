@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ApiResponse, isApiResponse } from "@/lib/types/api";
 import apiFetch from "@/lib/fetchapi/fetchWrapper";
-import { useSignUpStore } from "@/lib/store";
+import { useSignUpStore } from "@/lib/store/authStore/store";
 import { useRouter } from "next/navigation";
 import { EyeOff, Eye } from "lucide-react";
 export default function LoginForm() {

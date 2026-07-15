@@ -1,14 +1,16 @@
 import { create } from "zustand";
+import type { ContactSlice } from "./contact/contact.types";
+import { createContactSlice } from "./contact/contactSlice";
 import type {
   IMessageBase,
   IncomingMessage,
   IMessagePatch,
-} from "./Models/message";
-import { SocketMessageSchema } from "./zod/messages/Schemas";
-import type { updatedIConversation } from "./types/Conversation";
-import apiFetch from "./fetchapi/fetchWrapper";
-import { ApiResponse, isApiResponse } from "./types/api";
-import { msgSchema } from "./zod/messages/Schemas";
+} from "../../Models/message";
+import { SocketMessageSchema } from "../../zod/messages/Schemas";
+import type { updatedIConversation } from "../../types/Conversation";
+import apiFetch from "../../fetchapi/fetchWrapper";
+import { ApiResponse, isApiResponse } from "../../types/api";
+import { msgSchema } from "../../zod/messages/Schemas";
 // hepler function checks for duplicate messages
 const mergeAndDedupe = (
   existing: IMessageBase[],
@@ -73,7 +75,7 @@ interface historyProps {
   isFetchingHistory: boolean;
   historyError: string | null;
 }
-export interface ChatStore {
+export interface ChatStore extends ContactSlice {
   user: {
     _id: string;
     uid: string;
@@ -135,7 +137,7 @@ export interface ChatStore {
   }>;
 }
 
-export const useChatStore = create<ChatStore>((set, get) => ({
+export const useChatStore = create<ChatStore>((set, get, api) => ({
   user: null,
   socket: null,
   status: "idle",
@@ -378,7 +380,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     try {
       // send the message
-      const result = await apiFetch<IMessagePatch>(`api/messages/send`, {
+      const result = await apiFetch<IMessagePatch>(`/api/messages/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -479,7 +481,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     try {
       const response = await apiFetch<ApiResponse<IMessageBase[]>>(
-        `api/messages/${conversationId}?before=${createdAt}`,
+        `/api/messages/${conversationId}?before=${createdAt}`,
       );
       // Stop fetching if we hit the very beginning of the chat
       if (!response.data || response.data.length === 0) {
@@ -551,46 +553,43 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   setConversations: async () => {
     set({ isLoadingConversations: true });
     try {
-      const conversationList = await apiFetch<updatedIConversation[]>(
-        "api/conversations/conversationList",
+      const response = await apiFetch<ApiResponse<updatedIConversation[]>>(
+        "/api/conversations/conversationList",
       );
-      if (conversationList.length > 0) {
-        // push the data
-        set({ conversations: conversationList });
 
-        // update the lastSyncedAt
-        set({
-          lastSyncedAt:
-            conversationList[0].lastMessage?.createdAt ??
-            new Date().toISOString(),
+      const conversations = response.data ?? [];
+
+      // update the lastSyncedAt
+      set({
+        conversations,
+        lastSyncedAt:
+          conversations[0]?.lastMessage?.createdAt ?? new Date().toISOString(),
+      });
+
+      // push data in messages
+      set((state) => {
+        const seededMessages: Record<string, IMessageBase[]> = {};
+
+        conversations.forEach((conv) => {
+          const stringId = conv._id.toString();
+          // don't fill if we already have messages
+          if (conv.lastMessage && !(stringId in state.messages)) {
+            seededMessages[stringId] = [conv.lastMessage];
+          }
         });
 
-        // push data in messages
-        set((state) => {
-          const seededMessages: Record<string, IMessageBase[]> = {};
-
-          conversationList.forEach((conv) => {
-            const stringId = conv._id.toString();
-            // don't fill if we already have messages
-            if (conv.lastMessage && !(stringId in state.messages)) {
-              seededMessages[stringId] = [conv.lastMessage];
-            }
-          });
-
-          return {
-            messages: {
-              ...state.messages,
-              ...seededMessages,
-            },
-          };
-        });
-      } else {
-        set({ lastSyncedAt: new Date().toISOString() });
-      }
+        return {
+          messages: {
+            ...state.messages,
+            ...seededMessages,
+          },
+        };
+      });
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "an unexpected error occured";
-      set({ error: errorMessage });
+      set({
+        error:
+          err instanceof Error ? err.message : "an unexpected error occured",
+      });
     } finally {
       set({ isLoadingConversations: false });
     }
@@ -696,4 +695,5 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
     return httpReport;
   },
+  ...createContactSlice(set, get, api),
 }));

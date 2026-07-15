@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { z } from "zod";
 import { signUpSchema, emailSchema } from "@/lib/zod/zodSchemas";
-import { ApiResponse, UserInfo } from "./types/api";
-import apiFetch from "./fetchapi/fetchWrapper";
+import { ApiResponse, UserInfo } from "../../types/api";
+import apiFetch from "../../fetchapi/fetchWrapper";
 
 type FormStatus = "idle" | "submitting" | "error" | "success";
 
@@ -20,7 +20,7 @@ interface SignupState {
   setEmail: (email: string) => void;
   resetEmail: () => void;
   signUp: (password: string) => Promise<void>;
-  resend: (email:string | null) => Promise<ApiResponse<{userEmail:string}>>;
+  resend: (email: string | null) => Promise<ApiResponse<{ userEmail: string }>>;
 }
 
 export const useSignUpStore = create<SignupState>((set, get) => ({
@@ -123,15 +123,18 @@ export const useSignUpStore = create<SignupState>((set, get) => ({
       throw new Error("validation error,invalid email format");
     }
     try {
-      const responseData = await apiFetch<ApiResponse<{userEmail:string}>>("api/auth/resend", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const responseData = await apiFetch<ApiResponse<{ userEmail: string }>>(
+        "api/auth/resend",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userEmail: validation.data,
+          }),
         },
-        body: JSON.stringify({
-          userEmail: validation.data,
-        }),
-      });
+      );
       return responseData;
     } catch (error) {
       throw error;
