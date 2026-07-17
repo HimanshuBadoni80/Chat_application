@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 
 import AddContactDialog from "../AddNewContact/AddContactDialog";
 import SidebarTabs from "./SidebarTabs";
+import { ContactPreview } from "@/lib/store/chatStore/contact/contact.types";
 
 export interface ConversationPreview {
   id: string; // Always include the ID for React keys!
@@ -29,6 +30,8 @@ export interface ConversationPreview {
   isTyping: boolean;
   isActive: boolean;
 }
+
+type SidebarTab = "chats" | "contacts";
 
 // avatar logic
 const avatar = (username: string = "Unknown"): string => {
@@ -76,12 +79,25 @@ const selectConversationPreviews = (
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 };
-type SidebarTab  = "chats" | "contacts";
+
+const selectContactPreviews = (state: ChatStore): ContactPreview[] => {
+  return state.contacts.map((contact) => ({
+    id: contact._id,
+    user: contact.user
+      ? {
+          uid: contact.user.uid,
+          username: contact.user.username ?? "unknown",
+        }
+      : null,
+    createdAt: contact.createdAt,
+  }));
+};
+
 export default function ChatSideBarPanel() {
   const params = useParams<{ conversationId?: string }>();
   // it is a naviagation hook subscribed to the App router state
   const activeConversationId = params.conversationId;
-  const chatList = useChatStore(
+  const conversationList = useChatStore(
     useShallow((state) =>
       selectConversationPreviews(state, activeConversationId),
     ),
@@ -92,6 +108,10 @@ export default function ChatSideBarPanel() {
     (state) => state.isLoadingConversations,
   );
 
+  const isLoadingContacts = useChatStore((state) => state.isLoadingContacts);
+  const contactList = useChatStore(
+    useShallow((state) => selectContactPreviews(state)),
+  );
   const [activeTab, setActiveTab] = useState<SidebarTab>("chats");
 
   /* const chatlist: ConversationPreview[] = [
@@ -186,24 +206,14 @@ export default function ChatSideBarPanel() {
           </InputGroup>
         </div>
       </div>
-
-      {/* 
-        {!isLoadingConversations && chatlist.length === 0 ? (
-          <EmptyStateCard onAddContact={() => setAddContactOpen(true)} />
-        ) : (
-          chatlist.map((conversation) => (
-            <ConversationItem
-              key={conversation.id}
-              conversation={conversation}
-            />
-          ))
-        )}
-      </div> */}
       <SidebarTabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        conversationList={conversationList}
         isLoadingConversations={isLoadingConversations}
-        isChatListEmpty={chatList.length === 0}
-        chatList={chatList}
-        onAddContact={()=>setAddContactOpen(true)}
+        contactList={contactList}
+        isLoadingContacts={isLoadingContacts}
+        onAddContact={() => setAddContactOpen(true)}
       />
       <AddContactDialog
         open={addContactOpen}
@@ -214,4 +224,4 @@ export default function ChatSideBarPanel() {
 }
 
 // i may need to create a contact list like a phone book.
-// it will keep the history, overall manage the contacts.
+// it will keep the history, overall—manage the contacts.

@@ -73,6 +73,8 @@ export default function AddContactDialog(props:AddContactDialogProps) {
       throw new Error("Contact was added, but no contact details were returned");
     }
 
+    // call upsert function. 
+
     setInputUid("");
     props.onOpenChange(false); // close dialog
     } catch (error) {
