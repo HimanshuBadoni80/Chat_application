@@ -1,8 +1,8 @@
 "use server";
 import { cookies } from "next/headers";
-import GetSession from "@/lib/getSession";
+import { GetSession } from "@/lib/utils/session";
 import { redirect } from "next/navigation";
-import type { updatedClientSession } from "@/lib/types/Conversation";
+import type { updatedClientSession } from "@/lib/Models";
 import { deleteUserAccount } from "@/lib/auth/deleteUserAccount";
 
 type ActionError = {

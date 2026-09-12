@@ -1,5 +1,5 @@
 "use client";
-import { useChatStore } from "../../../../lib/store/chatStore/useChatStore";
+import { useChatStore } from "../../../../lib/store/chatStore/store";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { CopyToClipboardButton } from "./CopyToClipboardButton";

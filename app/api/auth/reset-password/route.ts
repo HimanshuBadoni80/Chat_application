@@ -1,16 +1,15 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { resetPasswordSchema } from "@/lib/zod/zodSchemas";
+import { resetPasswordSchema } from "@/lib/validation/auth.schema";
 import connectDB from "@/lib/actions/mongodb";
-import { ApiResponse } from "@/lib/types/api";
+import { ApiResponse } from "@/lib/types/apiResponse";
 import { z } from "zod";
 import { User, Session } from "@/lib/Models/index";
 import crypto from "crypto";
-import { handleApiError } from "@/lib/error/errorUtil";
-
+import { handleApiError } from "@/lib/utils/errorUtil";
 
 // looks for a Token Hash in the database.
-export  async function POST(request: NextRequest) {
+export async function POST(request: NextRequest) {
   /* the flow
         get the json body
         zod validation

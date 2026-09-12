@@ -17,6 +17,8 @@ export interface IUser extends Document {
   passwordResetHash?: string;
   passwordResetExpires?: Date;
   resetAttempts: number;
+  isDeleted: boolean;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +75,13 @@ const UserSchema = new Schema<IUser>(
     },
     resetAttempts: {
       type: Number,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
     },
   },
   {
@@ -155,8 +164,8 @@ UserSchema.pre(
 );
 
 UserSchema.index({ uid: 1 }, { unique: true });
-UserSchema.index({ email: 1 }, { unique: true });
-// UserSchema.index({verifyTokenExpiry: 1}, {expireAfterSeconds: 36000})
+UserSchema.index({ username: 1, email: 1 }, { unique: true });
+UserSchema.index({ verifyTokenExpiry: 1 }, { expireAfterSeconds: 3600 });
 
 const User = models.User || model<IUser>("User", UserSchema);
 

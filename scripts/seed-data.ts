@@ -49,20 +49,20 @@ async function main() {
     // Do NOT replace this with insertMany() for users.
     const [asha, ravi, meera] = await User.create([
       {
-        email: "asha@seed.local",
         username: "asha",
+        email: "asha@seed.local",
         password: "SeedPassword123!",
         isVerified: true,
       },
       {
-        email: "ravi@seed.local",
         username: "ravi",
+        email: "ravi@seed.local",
         password: "SeedPassword123!",
         isVerified: true,
       },
       {
-        email: "meera@seed.local",
         username: "meera",
+        email: "meera@seed.local",
         password: "SeedPassword123!",
         isVerified: true,
       },
@@ -75,14 +75,17 @@ async function main() {
       {
         ownerId: asha._id,
         userId: ravi._id,
+        nickname: "Ravi"
       },
       {
         ownerId: asha._id,
         userId: meera._id,
+        nickname: "Meera Dewan"
       },
       {
         ownerId: ravi._id,
         userId: asha._id,
+        nickname: "Asha kumari"
       },
     ]);
 

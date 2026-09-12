@@ -1,12 +1,14 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { updatedClientSession } from "@/lib/types/Conversation";
-import GetSession from "@/lib/getSession";
+import type { updatedClientSession } from "@/lib/Models";
+import { GetSession } from "@/lib/utils/session";
 import { Conversation, Message } from "@/lib/Models/index";
-import type { IConversation, IMessageBase } from "@/lib/Models/index";
-import { handleApiError } from "@/lib/error/errorUtil";
-import { ApiResponse } from "@/lib/types/api";
+import type { IConversation } from "@/lib/Models/index";
+import { handleApiError } from "@/lib/utils/errorUtil";
+import { ApiResponse } from "@/lib/types/apiResponse";
 import connectDB from "@/lib/actions/mongodb";
+import { toMessageDTO } from "@/lib/utils/toMessageDTO";
+import type { MessageDto } from "@/lib/validation/message.schema";
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,16 +89,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response, { status: 200 });
     }
 
-    // stringify all the dates and ObjectIds
-    const stringifiedMsgs: IMessageBase[] = missedMessages.map((msg) => ({
-      ...msg,
-      _id: msg._id.toString(),
-      senderId: msg.senderId.toString(),
-      conversationId: msg.conversationId.toString(),
-      createdAt: msg.createdAt.toISOString(),
-    }));
+    const stringifiedMsgs: MessageDto[] = missedMessages.map(toMessageDTO);
 
-    const response: ApiResponse<IMessageBase[]> = {
+    const response: ApiResponse<MessageDto[]> = {
       success: true,
       message: "missed messges fetched",
       data: stringifiedMsgs,

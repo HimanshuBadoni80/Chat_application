@@ -1,10 +1,10 @@
-import { useChatStore } from "@/lib/store/chatStore/useChatStore";
+import { useChatStore } from "@/lib/store/chatStore/store";
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import { ArrowDown } from "lucide-react";
-import type { IMessageBase } from "@/lib/Models";
+import type { ChatMessage } from "@/lib/validation/message.schema";
 
-const EMPTY_ARRAY: IMessageBase[] = []; // a stable reference as fallback
+const EMPTY_ARRAY: ChatMessage[] = []; // a stable reference as fallback
 // when Zustand checks EMPTY_ARRAY === EMPTY_ARRAY,
 // it evaluates to true, and the component safely ignores updates from other chats!
 
@@ -70,11 +70,11 @@ export default function MessageStream({
 
     // lastMsg are two types from the user has tempId and from someone else has just the _id.
     // for user tempId is always there.
-    const lastMsgId = lastMsg.tempId || lastMsg._id;
+    const lastMsgId = lastMsg.tempId || ('_id' in lastMsg ? lastMsg._id : null);
 
     if (!MsgIdRef.current || lastMsgId !== MsgIdRef.current) {
       // update the MsgIdRef
-      MsgIdRef.current = lastMsgId;
+      MsgIdRef.current = lastMsgId ?? undefined;
 
       const isSentByMe = lastMsg.senderId === currentUserId;
       if (isSentByMe) {
@@ -102,7 +102,7 @@ export default function MessageStream({
       (entires) => {
         const firstEntry = entires[0];
 
-        if (firstEntry.isIntersecting && !historyError) {
+        if (firstEntry.isIntersecting && !historyError && !conversationId.startsWith("draft:")) {
           fetchOlderMessages(conversationId);
         }
       },
@@ -112,7 +112,8 @@ export default function MessageStream({
         rootMargin: "100px 0px 0px 0px",
       },
     );
-    if (topAnchorRef.current) {
+    // Don't observe top anchor for drafts
+    if (topAnchorRef.current && !conversationId.startsWith("draft:")) {
       observer.observe(topAnchorRef.current);
     }
 
@@ -152,15 +153,27 @@ export default function MessageStream({
       {/* history tirgger div */}
       {!hasReachedTop && <div ref={topAnchorRef} className="h-1"></div>}
       {/* render all the messages */}
-      {messages.map((msg) => (
-        <MessageBubble
-          key={msg._id || msg.tempId}
-          content={msg.content}
-          isSentByMe={msg.senderId === currentUserId}
-          status={msg.status}
-          createdAt={msg.createdAt}
-        />
-      ))}
+      {messages.map((msg) => {
+        const handleRetry = () => {
+          if (conversationId.startsWith("draft:")) {
+            const contactId = conversationId.replace("draft:", "");
+            useChatStore.getState().sendFirstMessage(contactId);
+          } else {
+            useChatStore.getState().sendMessage(conversationId, msg.content);
+          }
+        };
+
+        return (
+          <MessageBubble
+            key={('_id' in msg ? msg._id : null) || msg.tempId}
+            content={msg.content}
+            isSentByMe={msg.senderId === currentUserId}
+            status={msg.status}
+            createdAt={msg.createdAt}
+            onRetry={msg.status === "failed" ? handleRetry : undefined}
+          />
+        );
+      })}
       {/* invisible anchor */}
       <div ref={messaagesEndRef} className="h-1"></div>
       {/* jump to bottom */}

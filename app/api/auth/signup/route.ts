@@ -1,10 +1,10 @@
-import { ApiResponse, UserInfo } from "@/lib/types/api";
+import { ApiResponse, UserInfo } from "@/lib/types/apiResponse";
 import connectDB from "@/lib/actions/mongodb";
 import User from "@/lib/Models/User";
 import crypto from "crypto";
-import { sendEmail } from "@/lib/mail/mail";
-import { handleApiError } from "@/lib/error/errorUtil";
-import { signUpSchema } from "@/lib/zod/zodSchemas";
+import { sendEmail } from "@/services/email";
+import { handleApiError } from "@/lib/utils/errorUtil";
+import { signUpSchema } from "@/lib/validation/auth.schema";
 import { z } from "zod";
 
 export async function POST(request: Request) {

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { usernameSchema } from "@/lib/zod/zodSchemas";
+import { usernameSchema } from "@/lib/validation/auth.schema";
 import { z } from "zod";
-import apiFetch from "@/lib/fetchapi/fetchWrapper";
-import { ApiResponse, isApiResponse } from "@/lib/types/api";
+import apiFetch from "@/lib/utils/fetchWrapper";
+import { ApiResponse, isApiResponse } from "@/lib/types/apiResponse";
 import Success from "./success";
 
 export interface receivedData {
@@ -173,4 +173,3 @@ export default function SetUserNameForm() {
     </div>
   );
 }
-

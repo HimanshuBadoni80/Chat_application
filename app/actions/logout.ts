@@ -1,7 +1,7 @@
 "use server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import deleteSession from "@/lib/auth/logoutService";
+import { deleteSession } from "@/lib/utils/session"; 
 
 export default async function logout() {
   const cookieStore = await cookies();

@@ -1,13 +1,14 @@
-import { Clock, Check, CheckCheck } from "lucide-react";
+import { Clock, Check, CheckCheck, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type MessageStatus = "pending" | "sent" | "delivered" | "read";
+type MessageStatus = "pending" | "failed" | "sent" | "delivered" | "read";
 
 interface MessageBubbleProps {
   content: string;
   isSentByMe: boolean;
   status?: MessageStatus;
   createdAt: string;
+  onRetry?: () => void;
 }
 
 function StatusIcon({ status = "sent" }: { status?: MessageStatus }) {
@@ -16,8 +17,17 @@ function StatusIcon({ status = "sent" }: { status?: MessageStatus }) {
     status === "read" ? "text-sky-200" : "text-white/70",
   );
 
+  if (status === "failed") {
+    return <AlertCircle aria-label="Failed" className={cn(iconClassName, "text-destructive-foreground")} />;
+  }
+
   if (status === "pending") {
-    return <Clock aria-label="Pending" className={iconClassName} />;
+    return (
+      <Clock
+        aria-label="Pending"
+        className={iconClassName}
+      />
+    );
   }
 
   if (status === "sent") {
@@ -48,6 +58,7 @@ export default function MessageBubble({
   isSentByMe,
   status = "sent",
   createdAt,
+  onRetry,
 }: MessageBubbleProps) {
   return (
     <div
@@ -63,6 +74,7 @@ export default function MessageBubble({
           isSentByMe
             ? "rounded-br-md bg-primary text-primary-foreground"
             : "rounded-bl-md border border-border bg-card text-foreground",
+          status === "failed" && "bg-destructive/90 text-destructive-foreground"
         )}
       >
         <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
@@ -72,13 +84,24 @@ export default function MessageBubble({
         <div
           className={cn(
             "mt-1.5 flex items-center gap-1 text-[0.625rem] leading-none",
-            isSentByMe ? "justify-end text-white/70" : "text-muted",
+            isSentByMe ? "justify-end text-primary-foreground/70" : "text-muted",
           )}
         >
           <MessageTime createdAt={createdAt} />
           {isSentByMe && <StatusIcon status={status} />}
         </div>
       </div>
+      
+      {/* Retry Button */}
+      {status === "failed" && onRetry && (
+        <button
+          onClick={onRetry}
+          className="ml-2 self-center rounded-full bg-destructive/10 p-2 text-destructive hover:bg-destructive/20 transition-colors"
+          title="Retry message"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }

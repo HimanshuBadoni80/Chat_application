@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { z } from "zod";
-import { signUpSchema, emailSchema } from "@/lib/zod/zodSchemas";
-import { ApiResponse, UserInfo } from "../../types/api";
-import apiFetch from "../../fetchapi/fetchWrapper";
+import { signUpSchema, emailSchema } from "@/lib/validation/auth.schema";
+import { ApiResponse, UserInfo } from "../../types/apiResponse";
+import apiFetch from "../../utils/fetchWrapper";
 
 type FormStatus = "idle" | "submitting" | "error" | "success";
 

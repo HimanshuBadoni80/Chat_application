@@ -1,143 +1,270 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { messageSchema } from "@/lib/zod/messages/Schemas";
-import { ApiResponse } from "@/lib/types/api";
-import GetSession from "@/lib/getSession";
-import { Message, Conversation } from "@/lib/Models/index";
-import { Types } from "mongoose";
-import type { IMessageBase, IMessagePatch } from "@/lib/Models/index";
-import * as z from "zod";
-import { handleApiError } from "@/lib/error/errorUtil";
+import { sendMessageSchema } from "@/lib/validation/message.schema";
+import { GetSession } from "@/lib/utils/session";
+import { sessionExpiredJSON } from "@/lib/auth/sessionExpiredJSON";
+import {
+  errorResponse,
+  successResponse,
+  zodValidationError,
+} from "@/lib/types/apiResponse";
+import { Conversation, Contact, Message } from "@/lib/Models";
+import type { Types } from "mongoose";
+import { toMessageDTO, type MessageDtoSource } from "@/lib/utils/toMessageDTO";
+import type { ConversationDTO } from "@/lib/validation/conversation.schema";
+import { toConversationDTO } from "@/lib/utils/toConversationDTO";
+import { handleApiError } from "@/lib/utils/errorUtil";
+import connectDB from "@/lib/actions/mongodb";
+
+interface PopulatedConvResult {
+  _id: Types.ObjectId;
+  participants: { _id: Types.ObjectId; isDeleted: boolean }[];
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validation = messageSchema.safeParse(body);
-    if (!validation.success) {
-      const flattened = z.flattenError(validation.error);
-      const response: ApiResponse = {
-        success: false,
-        message: "invalid credentials",
-        error: {
-          code: "VALIDATION_ERROR",
-          details: Object.fromEntries(
-            Object.entries(flattened.fieldErrors).map(([key, value]) => [
-              key,
-              value?.[0] || "Invalid",
-            ]),
-          ),
-        },
-      };
-      return NextResponse.json(response, { status: 400 });
+    const session = await GetSession();
+    if (!session) return sessionExpiredJSON();
+
+    let body: unknown;
+
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse(
+        400,
+        "Request body must be valid JSON",
+        "VALIDATION_ERROR",
+      );
     }
 
-    const { conversationId, content, messageType, tempId } = validation.data;
-    // authenticate the sender
-    const session = await GetSession();
-    // no active session
-    if (!session) {
-      const response: ApiResponse<{ redirectTo: string }> = {
-        success: false,
-        message: "Please login to start a chat",
-        data: {
-          redirectTo: "/login", // hard refresh
-        },
-        error: {
-          code: "NO_ACTIVE_SESSION",
-        },
-      };
-      return NextResponse.json(response, {
-        status: 401,
-      });
-    }
+    const validation = sendMessageSchema.safeParse(body);
+
+    if (!validation.success) return zodValidationError(validation.error);
 
     const senderId = session.user._id;
+    const input = validation.data;
 
-    const conversation = await Conversation.findOne({
-      _id: conversationId, //Look for the specific chat
-      isGroup: false,
-      participants: senderId, // AND verify the sender is allowed to be there
-    });
+    let conversationId: Types.ObjectId | undefined = undefined;
+    let isNewConversation: boolean = false;
+    let receiverId: Types.ObjectId | undefined = undefined;
+    let message: MessageDtoSource | null = null;
 
-    if (!conversation) {
-      const response: ApiResponse = {
-        success: false,
-        message: "not authorized to send message",
-        error: {
-          code: "UNAUTHORIZED_USER",
+    // –––existing conversation
+    if (input.kind === "existing") {
+      const conv: PopulatedConvResult | null = await Conversation.findOne({
+        _id: input.conversationId,
+        participants: senderId,
+      })
+        .select("_id participants")
+        .populate("participants", "_id  isDeleted")
+        .lean();
+
+      if (!conv)
+        return errorResponse(403, "Not authorised", "UNAUTHORIZED_USER");
+
+      const receiver = conv.participants.find(
+        (user) => String(user._id) !== String(senderId),
+      );
+
+      if (receiver === undefined || receiver.isDeleted === true) {
+        return errorResponse(404, "user doesn't exits", "USER_NOT_FOUND");
+      }
+      conversationId = conv._id;
+      receiverId = receiver._id;
+    } else {
+      // ––– new conversation from contact
+      const contact = await Contact.findOne({
+        _id: input.contactId,
+        ownerId: senderId,
+      }).populate("userId", "_id isDeleted");
+
+      if (!contact)
+        return errorResponse(404, "Contact not found", "USER_NOT_FOUND");
+
+      if (!contact.userId || contact.userId.isDeleted)
+        return errorResponse(410, "User no longer available", "USER_NOT_FOUND");
+
+      receiverId = contact.userId._id as Types.ObjectId;
+
+      // verify with direct key, to reuse the direct chat.
+      const directKey = [senderId.toString(), receiverId.toString()]
+        .sort()
+        .join(":");
+
+      // ── Transaction: create conversation + message atomically ──
+      const mongoose = await connectDB();
+      const dbSession = await mongoose.startSession();
+      try {
+        await dbSession.withTransaction(async () => {
+          const convResult = await Conversation.findOneAndUpdate(
+            {
+              directKey,
+              isGroup: false,
+            },
+            {
+              $setOnInsert: {
+                participants: [senderId, receiverId],
+                directKey,
+                isGroup: false,
+              },
+              $pull: { hiddenFor: senderId },
+            },
+            {
+              new: true,
+              upsert: true,
+              runValidators: true,
+              includeResultMetadata: true,
+              lean: true,
+              session: dbSession,
+            },
+          );
+
+          const conv = convResult.value;
+          if (!conv)
+            throw new Error("Conversation upsert returned no document");
+
+          isNewConversation = !convResult.lastErrorObject?.updatedExisting;
+          conversationId = conv._id;
+
+          const msgResult = await Message.findOneAndUpdate(
+            {
+              senderId,
+              tempId: input.tempId,
+            },
+            {
+              $setOnInsert: {
+                tempId: input.tempId,
+                conversationId,
+                senderId,
+                content: input.content,
+                messageType: input.messageType,
+                status: "sent",
+              },
+            },
+            {
+              new: true,
+              upsert: true,
+              runValidators: true,
+              includeResultMetadata: true,
+              lean: true,
+              session: dbSession,
+            },
+          );
+
+          message = msgResult.value;
+          if (!message) throw new Error("Message upsert retruned no document");
+
+          const isNewMessage = !msgResult.lastErrorObject?.updatedExisting;
+          if (isNewMessage) {
+            await Conversation.findByIdAndUpdate(
+              conv._id,
+              {
+                lastMessage: message._id,
+                updatedAt: new Date(),
+              },
+              {
+                session: dbSession,
+              },
+            );
+          }
+        });
+      } catch (error) {
+        throw error;
+      } finally {
+        await dbSession.endSession();
+      }
+    }
+
+    // Both branches must have resolved these by now
+    if (!conversationId || !receiverId) {
+      throw new Error("conversationId or receiverId unresolved");
+    }
+
+    if (!message) {
+      const msgResult = await Message.findOneAndUpdate(
+        { senderId, tempId: input.tempId },
+        {
+          $setOnInsert: {
+            tempId: input.tempId,
+            conversationId,
+            senderId,
+            content: input.content,
+            messageType: input.messageType,
+            status: "sent",
+          },
         },
-      };
-      return NextResponse.json(response, {
-        status: 403,
+        {
+          new: true,
+          upsert: true,
+          runValidators: true,
+          lean: true,
+        },
+      );
+
+      if (!msgResult) throw new Error("Message upsert returned no document");
+      message = msgResult as MessageDtoSource;
+
+      await Conversation.findByIdAndUpdate(conversationId, {
+        lastMessage: message._id,
+        updatedAt: new Date(),
+        $pull: { hiddenFor: senderId },
       });
     }
 
-    // get the receiverId
-    const receiverId = conversation.participants.find(
-      (Id: Types.ObjectId) => !Id.equals(senderId),
-    );
-
-    if (!receiverId) {
-      // This would only happen if someone is in a 1-on-1 chat with themselves!
-      throw new Error("Receiver not found");
+    const messagePayload = toMessageDTO(message);
+    let senderConversation: ConversationDTO | undefined = undefined;
+    let recipientConversation: ConversationDTO | undefined = undefined;
+    if (input.kind === "new") {
+      const populated = await Conversation.findById(conversationId)
+        .select("participants lastMessage clearedAt createdAt")
+        .populate("participants", "_id uid username isDeleted")
+        .populate("lastMessage", "-updatedAt")
+        .lean();
+      senderConversation = toConversationDTO(populated, senderId.toString());
+      recipientConversation = toConversationDTO(
+        populated,
+        receiverId.toString(),
+      );
     }
 
-    // parallel update
-    const newMessage = await Message.create({
-      tempId,
-      conversationId,
-      senderId,
-      content,
-      messageType,
-      status: "sent",
-    });
+    const wsPayload = isNewConversation
+      ? {
+          type: "NEW_CONVERSATION_MESSAGE",
+          payload: {
+            conversation: recipientConversation,
+            message: messagePayload,
+          },
+        }
+      : {
+          type: "NEW_MESSAGE",
+          payload: messagePayload,
+        };
 
-    // clean object DTO for both the Websocket and HTTP response
-    // this one is for the receiver with no status field
-    const messagePayload: IMessageBase = {
-      _id: newMessage._id.toString(),
-      conversationId: newMessage.conversationId.toString(),
-      senderId: newMessage.senderId.toString(),
-      content: newMessage.content,
-      messageType: newMessage.messageType,
-      createdAt: newMessage.createdAt.toISOString(),
-    };
-    await Conversation.findByIdAndUpdate(conversationId, {
-      lastMessage: newMessage,
-      updatedAt: new Date(),
-    });
+    const internalSecret = process.env.INTERNAL_SECRET;
 
-    // websocket server logic here
-    fetch(`${process.env.NODE_SERVER_URL}/api/push`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.INTERNAL_SECRET || "",
-      },
-      body: JSON.stringify({
-        receiverId: receiverId.toString(),
-        payload: messagePayload, // send the clean object
-      }),
-    }).catch((err) => console.error("Ws push failed", err));
+    if (internalSecret) {
+      fetch(`${process.env.NODE_SERVER_URL}/api/push`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": internalSecret,
+        },
+        body: JSON.stringify({
+          receiverId: receiverId.toString(),
+          payload: wsPayload,
+        }),
+      }).catch((err) => console.error("WS push failed", err));
+    }
 
-    const response: ApiResponse<IMessagePatch> = {
-      success: true,
-      message: "message saved",
-      data: {
-        _id: newMessage._id.toString(),
-        tempId,
-        status: "sent",
-        createdAt: newMessage.createdAt.toISOString(),
-      }, // send the clean object
-    };
-    return NextResponse.json(response, {
-      status: 200,
-    });
+    if (input.kind === "new") {
+      return successResponse("Message saved", 200, {
+        conversation: senderConversation,
+        message: messagePayload,
+      });
+    }
+
+    return successResponse("Message saved", 200, messagePayload);
   } catch (error) {
     return handleApiError(error);
   }
 }
-
-/* we trusted the Conversation document and did not check the receiverId.
-if receiver is not there(account deleted or removed from the app), 
-we should have a "Cleanup Service" that removes them from the participants array of all their conversations or marks the conversation as inactive.
-If the senderId is in the participants and there is another ID there, we assume the "Folder" is still valid. */

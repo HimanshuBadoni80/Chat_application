@@ -1,12 +1,12 @@
 "use client";
 
 import { z } from "zod";
-import { zodLogin } from "@/lib/zod/zodSchemas";
+import { zodLogin } from "@/lib/validation/auth.schema";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { ApiResponse, isApiResponse } from "@/lib/types/api";
-import apiFetch from "@/lib/fetchapi/fetchWrapper";
+import { ApiResponse, isApiResponse } from "@/lib/types/apiResponse";
+import apiFetch from "@/lib/utils/fetchWrapper";
 import { useSignUpStore } from "@/lib/store/authStore/store";
 import { useRouter } from "next/navigation";
 import { EyeOff, Eye } from "lucide-react";

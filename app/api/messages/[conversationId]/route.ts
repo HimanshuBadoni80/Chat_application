@@ -1,130 +1,85 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { ApiResponse } from "@/lib/types/api";
-import connectDB from "@/lib/actions/mongodb";
-import { handleApiError } from "@/lib/error/errorUtil";
-import { Message, Conversation, IMessageBase } from "@/lib/Models";
-import GetSession from "@/lib/getSession";
-import { historyFetchSchema } from "@/lib/zod/messages/Schemas";
-import * as z from "zod";
+import {
+  errorResponse,
+  zodValidationError,
+  successResponse,
+} from "@/lib/types/apiResponse";
+import { handleApiError } from "@/lib/utils/errorUtil";
+import { Message, Conversation, IMessage } from "@/lib/Models";
+import type { IConversation } from "@/lib/Models";
+import { GetSession } from "@/lib/utils/session";
+import { historyFetchSchema } from "@/lib/validation/message.schema";
+import { sessionExpiredJSON } from "@/lib/auth/sessionExpiredJSON";
+import { QueryFilter } from "mongoose";
+import { toMessageDTO } from "@/lib/utils/toMessageDTO";
+import type { MessageDto } from "@/lib/validation/message.schema";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> },
 ) {
-  /* the flow
-        1. get the conversationId from the url params
-        2. check the user session and existence as a participant
-        3. sort by createdAt in descending order 
-        4. get the first 20 messages and send to the frontend
-    */
-
   try {
+    const session = await GetSession();
+
+    if (!session) {
+      return sessionExpiredJSON();
+    }
+
     // get the id from params
     const { conversationId } = await params;
-    const before = request.nextUrl.searchParams.get("before");
 
     // validate the data
     const validation = historyFetchSchema.safeParse({
       conversationId,
-      createdAt: before || undefined,
+      createdAt: request.nextUrl.searchParams.get("before") || undefined,
     });
 
     if (!validation.success) {
-      const flattened = z.flattenError(validation.error);
-      const response: ApiResponse = {
-        success: false,
-        message: "invalid credentials",
-        error: {
-          code: "VALIDATION_ERROR",
-          details: Object.fromEntries(
-            Object.entries(flattened.fieldErrors).map(([key, value]) => [
-              key,
-              value?.[0] || "Invalid",
-            ]),
-          ),
-        },
-      };
-      return NextResponse.json(response, { status: 400 });
+      return zodValidationError(validation.error);
     }
 
-    const ConversationId = validation.data.conversationId;
-    const beforeThisDate = validation.data.createdAt;
-
-    // connect the DB
-    await connectDB();
-
-    // check the user session
-    const session = await GetSession();
-
-    // no active session
-    if (!session) {
-      const response: ApiResponse<{ redirectTo: string }> = {
-        success: false,
-        message: "Please login to start a chat",
-        data: {
-          redirectTo: "/login", // hard refresh
-        },
-        error: {
-          code: "NO_ACTIVE_SESSION",
-        },
-      };
-      return NextResponse.json(response, {
-        status: 401,
-      });
-    }
-
-    const currentUserId = session.user._id;
+    const userId = session.user._id as string;
+    const ConvId = validation.data.conversationId;
+    const before = validation.data.createdAt;
 
     // check if the currentUser is participant or not
-    const conversation = await Conversation.findOne({
-      _id: ConversationId,
-      participants: currentUserId, // { $elemMatch: { $eq: currentUserId } }
-    }).select("_id");
+    const conversation: IConversation = await Conversation.findOne({
+      _id: ConvId,
+      participants: userId, // { $elemMatch: { $eq: currentUserId } }
+    }).lean();
 
     if (!conversation) {
-      const response: ApiResponse = {
-        success: false,
-        message: "not authorized to view these messages",
-        error: {
-          code: "UNAUTHORIZED_USER",
-        },
-      };
-      return NextResponse.json(response, {
-        status: 403,
-      });
+      return errorResponse(
+        403,
+        "not authorized to view these messages",
+        "UNAUTHORIZED_USER",
+      );
     }
 
+    const clearedAt = conversation.clearedAt.get(userId);
+
+    const query: QueryFilter<IMessage> = { conversationId: conversation._id };
+
+    query.createdAt = {
+      ...(clearedAt ? { $gt: clearedAt } : {}),
+      $lt: before ?? new Date(),
+    };
+
     // fetch the last 20 messages
-    const messages = await Message.find({
-      conversationId: ConversationId,
-      createdAt: { $lt: beforeThisDate ?? new Date() },
-    })
+    const messages = await Message.find(query)
       .sort({ createdAt: -1 }) // descending order, latest date is larger than the older one
       .limit(20)
       .lean();
 
-    const oldestToNewMessages = [...messages].reverse(); // for ui, latest at the bottom,oldest at the top of screen
+    messages.reverse();
 
-    // clean DTO Data Transfer Object
-    const cleanMessages: IMessageBase[] = oldestToNewMessages.map((msg) => ({
-      _id: msg._id.toString(),
-      tempId: msg.tempId ? msg.tempId.toString() : undefined,
-      conversationId: msg.conversationId.toString(),
-      senderId: msg.senderId.toString(),
-      content: msg.content,
-      messageType: msg.messageType,
-      status: msg.status || "sent",
-      createdAt: msg.createdAt.toISOString(),
-    }));
-    const response: ApiResponse<IMessageBase[]> = {
-      success: true,
-      message: "messages fetched successfully",
-      data: cleanMessages,
-    };
+    const cleanMessages: MessageDto[] = messages.map(toMessageDTO);
 
-    return NextResponse.json(response, {
-      status: 200,
-    });
+    return successResponse<MessageDto[]>(
+      "messages fetched successfully",
+      200,
+      cleanMessages,
+    );
   } catch (error) {
     return handleApiError(error);
   }

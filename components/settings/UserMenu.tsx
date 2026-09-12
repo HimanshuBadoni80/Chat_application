@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-import { useChatStore } from "@/lib/store/chatStore/useChatStore";
+import { useChatStore } from "@/lib/store/chatStore/store";
 
 import { LogoutAlertDialog } from "./LogoutAlertDialog";
 import { SettingsDialog } from "./SettingsDialog";

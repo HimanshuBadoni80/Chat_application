@@ -1,9 +1,9 @@
-import { Schema, Document, model, models } from "mongoose";
+import { Schema, Document, model, models, Types } from "mongoose";
 
 export interface IMessage extends Document {
-  tempId?: string;
-  conversationId: Schema.Types.ObjectId;
-  senderId: Schema.Types.ObjectId;
+  tempId: string;
+  conversationId: Types.ObjectId;
+  senderId: Types.ObjectId;
   content: string;
   messageType: "text" | "image" | "file";
   status: "sent" | "delivered" | "read";
@@ -11,32 +11,11 @@ export interface IMessage extends Document {
   updatedAt: Date;
 }
 
-// used in useChatStore , [conversationId]/route.ts, api/messages/send/route.ts
-export interface IMessageBase {
-  _id?: string; // Lean objects have string/ObjectId IDs
-  tempId?: string;
-  conversationId: string;
-  senderId: string;
-  content: string;
-  messageType: "text" | "image" | "file";
-  status?: "sent" | "delivered" | "read" | "pending";
-  createdAt: string;
-  
-}
-
-export interface IMessagePatch {
-  _id: string;
-  tempId: string;
-  createdAt: string;
-  status: "sent";
-}
-
-export type IncomingMessage = IMessageBase | IMessagePatch;
-
 const MessageSchema = new Schema<IMessage>(
   {
     tempId: {
       type: String,
+      required: true,
     },
     conversationId: {
       type: Schema.Types.ObjectId,
@@ -68,7 +47,7 @@ const MessageSchema = new Schema<IMessage>(
   },
 );
 
-MessageSchema.index({ tempId: 1 }, { unique: true });
+MessageSchema.index({ senderId: 1, tempId: 1 }, { unique: true });
 const Message = models.Message || model<IMessage>("Message", MessageSchema);
 
 export default Message;

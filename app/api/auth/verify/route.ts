@@ -11,8 +11,8 @@ import { z } from "zod";
 import crypto from "crypto";
 import connectDB from "@/lib/actions/mongodb";
 import User from "@/lib/Models/User";
-import { ApiResponse } from "@/lib/types/api";
-import CreateSessionAndResponse from "@/lib/createsession";
+import { ApiResponse } from "@/lib/types/apiResponse";
+import { CreateSessionAndResponse } from "@/lib/utils/session";
 import { NextRequest } from "next/server";
 
 const verifySchema = z.object({

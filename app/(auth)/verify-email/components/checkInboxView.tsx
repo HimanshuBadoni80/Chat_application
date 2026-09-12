@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { ApiResponse } from "@/lib/types/api";
-import { useRouter,useSearchParams } from "next/navigation";
+import { ApiResponse } from "@/lib/types/apiResponse";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageStatus } from "../page";
 interface CheckInboxProps {
   email: string | null;
-  resend: (email:string | null) => Promise<ApiResponse<{userEmail:string}>>;
+  resend: (email: string | null) => Promise<ApiResponse<{ userEmail: string }>>;
   setErrorMessage: (errMessage: string) => void;
   setStatus: (status: PageStatus) => void;
 }
@@ -75,11 +75,21 @@ export default function CheckInboxView({
       <div className="pointer-events-none absolute bottom-1/4 right-1/4 h-96 w-96 translate-x-1/2 translate-y-1/2 rounded-full bg-secondary/20 blur-[100px]" />
 
       <div className="relative z-10 w-full max-w-md space-y-8 rounded-3xl border border-border/50 bg-card/60 p-8 shadow-2xl backdrop-blur-xl sm:p-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        
         {/* Header Icon / Graphic */}
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4 ring-8 ring-primary/5">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-8 w-8 text-primary"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            />
           </svg>
         </div>
 
@@ -90,9 +100,7 @@ export default function CheckInboxView({
           <p className="mt-4 text-sm text-muted-foreground">
             We have sent a verification link to
           </p>
-          <p className="mt-1 font-medium text-foreground text-lg">
-            {email}
-          </p>
+          <p className="mt-1 font-medium text-foreground text-lg">{email}</p>
         </div>
 
         <div className="mt-8 space-y-6">
@@ -101,22 +109,40 @@ export default function CheckInboxView({
               onClick={handleResend}
               disabled={isPending || countdown > 0}
               className={`group relative flex w-full justify-center overflow-hidden rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                (isPending || countdown > 0) ? "opacity-70 cursor-not-allowed hover:scale-100 active:scale-100" : ""
+                isPending || countdown > 0
+                  ? "opacity-70 cursor-not-allowed hover:scale-100 active:scale-100"
+                  : ""
               }`}
             >
               <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100"></span>
               <span className="flex items-center gap-2 relative z-10">
                 {isPending && (
-                  <svg className="h-5 w-5 animate-spin text-primary-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="h-5 w-5 animate-spin text-primary-foreground"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                 )}
                 {isPending
                   ? "Sending..."
                   : countdown > 0
-                  ? `Wait ${countdown}s to resend`
-                  : "Resend verification email"}
+                    ? `Wait ${countdown}s to resend`
+                    : "Resend verification email"}
               </span>
             </button>
 
@@ -129,7 +155,10 @@ export default function CheckInboxView({
 
           <div className="text-center text-sm text-muted-foreground pt-4 border-t border-border/50">
             Entered the wrong email?{" "}
-            <Link href="/signup" className="font-medium text-primary hover:text-primary/80 hover:underline transition-colors">
+            <Link
+              href="/signup"
+              className="font-medium text-primary hover:text-primary/80 hover:underline transition-colors"
+            >
               Go back
             </Link>
           </div>

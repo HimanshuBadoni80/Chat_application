@@ -1,23 +1,69 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useEffect } from "react";
 import { Send } from "lucide-react";
-import { useChatStore } from "@/lib/store/chatStore/useChatStore";
+import { useChatStore } from "@/lib/store/chatStore/store";
 import { Button } from "@/components/ui/button";
-
+import { useTypingEmitter } from "@/hooks/useTypingEmitter";
 export default function MessageInput({
-  conversationId,
+  id,
+  receiverId,
+  isDraft = false,
+  disabled = false,
 }: {
-  conversationId: string;
+  id: string; // can be conversationId or contactId
+  receiverId: string;
+  isDraft?: boolean;
+  disabled?: boolean;
 }) {
-  const [inputContent, setInputContent] = useState("");
-  const sendMessage = useChatStore((state) => state.sendMessage);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const socket = useChatStore((state) => state.socket);
+  const isIdentified = useChatStore((state) => state.isIdentified);
+
+  const { onKeyStroke, stopTyping } = useTypingEmitter(
+    id,
+    receiverId,
+    socket!,
+    isIdentified,
+  );
+
+  useEffect(() => {
+    const node = inputRef.current;
+    // 1. Mount: Populate from Zustand and clear it globally
+    if (node) {
+      const existingDraft = useChatStore.getState().draftInputs[id];
+      if (existingDraft && existingDraft.text) {
+        node.value = existingDraft.text;
+      }
+    }
+    useChatStore.getState().setDraftInput(id, null);
+
+    // 2. Unmount: Save the current text to Zustand if it exists
+    return () => {
+      const text = node?.value.trim();
+      if (text) {
+        useChatStore.getState().setDraftInput(id, {
+          text,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    };
+  }, [id]);
+
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
-    if (!inputContent.trim()) return;
+    if (!inputRef.current || disabled) return;
 
-    const text = inputContent;
-    // clean the state
-    setInputContent("");
-    await sendMessage(conversationId, text);
+    const text = inputRef.current.value.trim();
+    if (!text) return;
+
+    // Clear the input instantly
+    inputRef.current.value = "";
+
+    if (isDraft) {
+      await useChatStore.getState().sendFirstMessage(id, text);
+    } else {
+      stopTyping();
+      await useChatStore.getState().sendMessage(id, text);
+    }
   };
 
   return (
@@ -27,16 +73,17 @@ export default function MessageInput({
         onSubmit={handleSend}
       >
         <input
+          ref={inputRef}
           type="text"
-          value={inputContent}
-          onChange={(e) => setInputContent(e.target.value)}
+          onInput={onKeyStroke}
           placeholder="Type a message..."
-          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted"
+          disabled={disabled}
+          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted disabled:opacity-50"
         />
         <Button
           type="submit"
           size="icon"
-          disabled={!inputContent.trim()}
+          disabled={disabled}
           aria-label="Send message"
           className="size-10 rounded-lg"
         >

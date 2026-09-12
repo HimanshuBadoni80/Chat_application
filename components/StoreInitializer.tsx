@@ -1,6 +1,6 @@
 "use client";
 
-import { useChatStore } from "@/lib/store/chatStore/useChatStore";
+import { useChatStore } from "@/lib/store/chatStore/store";
 import { useEffect, useRef } from "react";
 export default function StoreInitializer({
   user,
@@ -15,15 +15,16 @@ export default function StoreInitializer({
 }) {
   const initialized = useRef(false);
   const setAuth = useChatStore((state) => state.setAuth);
-  const setConversations = useChatStore((state) => state.setConversations);
-
+  const fetchConversations = useChatStore((state) => state.fetchConversations);
+  const fetchContacts = useChatStore((state) => state.fetchContacts);
   useEffect(() => {
     if (initialized.current) return;
 
     initialized.current = true;
     setAuth(user);
-    void setConversations(); // loads all the conversations
-  }, [setAuth, setConversations, user]);
+    void fetchConversations(); // loads all the conversations
+    void fetchContacts();
+  }, [setAuth, fetchConversations, user, fetchContacts]);
   return null;
 }
 

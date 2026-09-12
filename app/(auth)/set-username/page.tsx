@@ -1,5 +1,5 @@
 import SetUserNameForm from "./setUsernameForm";
-import GetSession from "@/lib/getSession";
+import { GetSession } from "@/lib/utils/session";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 

@@ -1,8 +1,8 @@
-import { Schema, model, models, Document } from "mongoose";
+import { Schema, model, models, Document,Types } from "mongoose";
 
 export interface ClientSession extends Document {
   sessionToken: string;
-  user: Schema.Types.ObjectId;
+  user: Types.ObjectId;
   expiresAt: Date;
   valid: boolean;
   userAgent: string;
@@ -10,6 +10,18 @@ export interface ClientSession extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// for front-end
+export type updatedClientSession = Omit<ClientSession, "_id" | "user"> & {
+  _id: string;
+  user: {
+    _id: string;
+    uid: string;
+    username: string | null;
+    email: string;
+    isVerified: boolean;
+  };
+};
 
 const SessionSchema = new Schema<ClientSession>(
   {

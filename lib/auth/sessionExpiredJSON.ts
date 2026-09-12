@@ -1,35 +1,24 @@
 import { NextResponse } from "next/server";
-import { ApiResponse } from "../types/api";
+import { ApiResponse } from "../types/apiResponse";
 
+export function sessionExpiredJSON() {
+  const body: ApiResponse<{ redirectTo: string }> = {
+    success: false,
+    message: "Your session has expired. Please log in again.",
+    data: {
+      redirectTo: "/login?reason=session_expired",
+    },
+    error: {
+      code: "NO_ACTIVE_SESSION",
+    },
+  };
 
+  const response = NextResponse.json(body, { status: 401 });
 
-export function sessionExpiredJSON(){
+  response.cookies.delete({ name: "session_token", path: "/" });
 
-    const body:ApiResponse<{redirectTo:string}> = {
-        success: false,
-        message: "Your session has expired. Please log in again.",
-        data : {
-            redirectTo: "/login?reason=session_expired"
-        },
-        error:{
-            code:"NO_ACTIVE_SESSION",
-        }
-    }
-
-    const response = NextResponse.json(body, {status:401});
-
-    response.cookies.delete({name:"session_token",
-        path:"/"
-    });
-
-    return response;
-
-    
+  return response;
 }
-
-
-
-
 
 /* Deleting the cookie is enough only for the browser-side cleanup—but every HTTP request still needs an HTTP response.
 

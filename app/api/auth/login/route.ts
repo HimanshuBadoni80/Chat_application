@@ -1,13 +1,13 @@
 import connectDB from "@/lib/actions/mongodb";
 import User from "@/lib/Models/User";
 
-import { zodLogin } from "@/lib/zod/zodSchemas";
+import { zodLogin } from "@/lib/validation/auth.schema";
 import { z } from "zod";
-import { ApiResponse } from "@/lib/types/api";
+import { ApiResponse } from "@/lib/types/apiResponse";
 import bcrypt from "bcrypt";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import CreateSessionAndResponse from "@/lib/createsession";
+import { CreateSessionAndResponse } from "@/lib/utils/session";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -74,7 +74,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-
     // if no username
     const redirectPath = user.username ? undefined : "/set-username";
 
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
       request,
       "json",
       "Logged in successfully",
-      redirectPath
+      redirectPath,
     );
     return response;
   } catch (error) {

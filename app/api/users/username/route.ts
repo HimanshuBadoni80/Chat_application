@@ -1,12 +1,12 @@
-import GetSession from "@/lib/getSession";
+import { GetSession } from "@/lib/utils/session";
 import connectDB from "@/lib/actions/mongodb";
 import User from "@/lib/Models/User";
-import { ApiResponse } from "@/lib/types/api";
-import { usernameSchema } from "@/lib/zod/zodSchemas";
+import { ApiResponse } from "@/lib/types/apiResponse";
+import { usernameSchema } from "@/lib/validation/auth.schema";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { handleApiError } from "@/lib/error/errorUtil";
+import { handleApiError } from "@/lib/utils/errorUtil";
 
 export async function PATCH(request: Request) {
   try {
@@ -78,17 +78,24 @@ export async function PATCH(request: Request) {
 
     /* The most common placement for revalidatePath is inside a Server Action after a database mutation (Insert, Update, Delete)  
     
-    When you use Next.js, the framework aggressively caches your Server Components and data fetches to make the app incredibly fast. revalidatePath is the kill switch you pull when data changes in your database and you need the UI to update immediately for the user*/
+    When you use Next.js, the framework aggressively caches your Server Components and data fetches to make the app incredibly fast. revalidatePath is the kill switch you pull when data changes in your database and you need the UI to update immediately for the user
 
-    //  This forces Next.js to fetch the new data from the DB on the next render
-    // accepts either page or layout
-    // default: page
-    //Example: revalidatePath('/blog/[slug]', 'page') will purge the specific post being viewed
-    //layout: Revalidates the specified layout segment and all segments underneath it
-    /* Example: revalidatePath('/blog', 'layout') will instantly clear the cache for /blog, /blog/post-1, /blog/post-2, and any other nested route */
+    This forces Next.js to fetch the new data from the DB on the next render
+    accepts either page or layout
+    default: page
+    Example: revalidatePath('/blog/[slug]', 'page') will purge the specific post being viewed
+    layout: Revalidates the specified layout segment and all segments underneath it
+    Example: revalidatePath('/blog', 'layout') will instantly clear the cache for /blog, /blog/post-1, /blog/post-2, and any other nested route
+    
+    */
+
     revalidatePath("/chat", "layout");
 
-    const response: ApiResponse<{ uid:string, username: string;redirectTo: string }> = {
+    const response: ApiResponse<{
+      uid: string;
+      username: string;
+      redirectTo: string;
+    }> = {
       success: true,
       message: "Username updated",
       data: {

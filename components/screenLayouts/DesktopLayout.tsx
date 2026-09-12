@@ -4,7 +4,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "../ui/resizable";
-import ChatSideBarPanel from "../chat/sidebar/ChatSideBar";
+import ChatSideBarPanel from "../chat/chatSidebar/ChatSideBar";
 import React from "react";
 
 export default function DesktopLayout({
@@ -29,3 +29,5 @@ export default function DesktopLayout({
     </div>
   );
 }
+
+// to add- context menu

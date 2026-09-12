@@ -1,9 +1,9 @@
-import GetSession from "@/lib/getSession";
+import { GetSession } from "@/lib/utils/session";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import StoreInitializer from "@/components/StoreInitializer";
-import type { updatedClientSession } from "@/lib/types/Conversation";
-import DesktopLayout from "@/components/screenLayouts/DesktopLayout";
+import type { updatedClientSession } from "@/lib/Models";
+import ChatWorkspaceShell from "@/components/chat/chatSidebar/ChatWorkspaceShell";
 import ChatConnectionManager from "@/components/chat/ChatConnectionManager";
 import { Toaster } from "react-hot-toast";
 export default async function ChatLayout({
@@ -45,7 +45,8 @@ export default async function ChatLayout({
     <div className="flex h-screen w-full overflow-hidden">
       <StoreInitializer user={user} />
       <ChatConnectionManager />
-      <DesktopLayout>{children}</DesktopLayout>
+      <ChatWorkspaceShell>{children}</ChatWorkspaceShell>
+      {/* to be updated later */}
       <Toaster
         position="top-center"
         reverseOrder={false}

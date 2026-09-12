@@ -1,71 +1,46 @@
 import { Conversation } from "@/lib/Models/index";
-import { NextResponse } from "next/server";
-import GetSession from "@/lib/getSession";
-import type {
-  updatedClientSession,
-  updatedIConversation,
-  PopulatedParticipant,
-} from "@/lib/types/Conversation";
-import connectDB from "@/lib/actions/mongodb";
-import { handleApiError } from "@/lib/error/errorUtil";
-import { ApiResponse } from "@/lib/types/api";
+import type { reducedIConversation } from "@/lib/Models/conversation";
+import type { ChatConversation } from "@/lib/validation/conversation.schema";
+import { GetSession } from "@/lib/utils/session";
+import { successResponse } from "@/lib/types/apiResponse";
+import { updatedClientSession } from "@/lib/Models/index";
+import { handleApiError } from "@/lib/utils/errorUtil";
+import { sessionExpiredJSON } from "@/lib/auth/sessionExpiredJSON";
+import { toConversationDTO } from "@/lib/utils/toConversationDTO";
 
-// function to get conversation list
-export  async function GET() {
+// get conversation list
+export async function GET() {
   try {
     const session: updatedClientSession = await GetSession();
 
-    if (!session) {
-      // tell the user to log in again and do a hard refresh
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Unauthorised",
-        },
-        { status: 401 },
-      );
-    }
+    if (!session) return sessionExpiredJSON();
 
-    // get the user from the session
-    const userDocId = session.user._id;
-    await connectDB();
+    const userId = session.user._id;
 
-    const rawlist = await Conversation.find({
-      participants: userDocId,
+    const conversationList: reducedIConversation[] = await Conversation.find({
+      participants: userId,
+      hiddenFor: { $ne: userId },
     })
-      .populate("participants", "_id uid username")
+      .select("-directKey -isGroup  -hiddenFor -updatedAt")
+      .populate("participants", "_id uid username isDeleted")
       .populate("lastMessage", "-updatedAt")
       .sort({ updatedAt: -1 })
       .lean();
 
-    const conversationList: updatedIConversation[] = rawlist.map((conv) => ({
-      ...conv,
-      _id: conv._id.toString(),
-      createdAt: conv.createdAt?.toISOString(),
-      participants: conv.participants?.map((p: PopulatedParticipant) => ({
-        ...p,
-        _id: p._id?.toString(),
-      })),
-      // Use optional chaining to prevent "undefined" errors
-      lastMessage: conv.lastMessage
-        ? {
-            ...conv.lastMessage,
-            _id: conv.lastMessage._id?.toString(),
-            senderId: conv.lastMessage.senderId?.toString(),
-            createdAt: conv.lastMessage.createdAt?.toISOString(),
-          }
-        : null,
-    }));
+    const inbox: ChatConversation[] = conversationList.map((conv) =>
+      toConversationDTO(conv, userId.toString()),
+    );
 
-    // if conversation list is empty you just send it anyway, new users will have no conversations. frontend will show the start new chat ui.
-
-    const response: ApiResponse<updatedIConversation[]> = {
-      success: true,
-      message: "successfully fetched the conversations",
-      data: conversationList,
-    };
-
-    return NextResponse.json(response, { status: 200 });
+    // sort
+    inbox.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    return successResponse<ChatConversation[]>(
+      "successfully fetched the conversations",
+      200,
+      inbox,
+    );
   } catch (error) {
     return handleApiError(error);
   }

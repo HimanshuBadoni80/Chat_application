@@ -1,15 +1,15 @@
 import { User } from "@/lib/Models/index";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { emailSchema } from "@/lib/zod/zodSchemas";
+import { emailSchema } from "@/lib/validation/auth.schema";
 import crypto from "crypto";
-import { sendEmail } from "@/lib/mail/mail";
-import { ApiResponse } from "@/lib/types/api";
+import { sendEmail } from "@/services/email";
+import { ApiResponse } from "@/lib/types/apiResponse";
 import connectDB from "@/lib/actions/mongodb";
-import { handleApiError } from "@/lib/error/errorUtil";
+import { handleApiError } from "@/lib/utils/errorUtil";
 
 // the email sender
-export  async function POST(request: NextRequest) {
+export async function POST(request: NextRequest) {
   /* get the json
        validate json
        call the db
