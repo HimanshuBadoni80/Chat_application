@@ -6,7 +6,7 @@ namespace NodeJS {
     NEXT_PUBLIC_WS_URL: string;
 
     // ---- Server only (never expose to browser) ----
-    MONGODB_URL: string;
+    MONGODB_URI: string;
     RESEND_API_KEY: string;
     NODE_SERVER_URL: string;
     INTERNAL_SECRET: string;
